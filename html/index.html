@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>视觉语言模型（VLM）的监督微调与强化学习实战教程</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item active" >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">视觉语言模型（VLM）的监督微调与强化学习实战教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 1 章：VLM 架构与原理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 2 章：数据准备与预处理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 3 章：SFT 训练策略</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 4 章：分布式训练与优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 5 章：RLHF 基础与实现</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 6 章：直接偏好优化（DPO）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 7 章：评估体系设计</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 8 章：模型部署与服务化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 9 章：CUDA OOM 调试完全指南</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 10 章：训练崩溃与 NaN 问题</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 11 章：训练速度优化实战</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 12 章：多机多卡调试地狱</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="vlm">视觉语言模型（VLM）的监督微调与强化学习实战教程</h1>
+<h2 id="_1">关于本教程</h2>
+<p>本教程面向具有深度学习基础的工程师和研究人员，系统介绍视觉语言模型（VLM）的监督微调（SFT）和强化学习（RL）技术。我们将从实践角度出发，深入探讨如何将预训练的多模态大模型适配到特定任务，提升模型在实际应用中的表现。</p>
+<h2 id="_2">学习目标</h2>
+<p>完成本教程后，您将能够：</p>
+<ul>
+<li>理解 VLM 的架构设计和关键组件</li>
+<li>掌握多模态数据的准备和预处理流程</li>
+<li>实施高效的 SFT 训练策略</li>
+<li>应用 RLHF/DPO 等强化学习方法优化模型</li>
+<li>设计合理的评估体系并部署模型</li>
+<li><strong>快速诊断和解决训练中的各类问题</strong></li>
+<li><strong>将训练速度提升 2-5 倍</strong></li>
+<li><strong>将显存占用降低 30-50%</strong></li>
+</ul>
+<h2 id="_3">预备知识</h2>
+<ul>
+<li><strong>深度学习基础</strong>：熟悉 Transformer、注意力机制、反向传播</li>
+<li><strong>Python 编程</strong>：能够阅读和修改深度学习代码</li>
+<li><strong>机器学习理论</strong>：了解损失函数、优化器、正则化等概念</li>
+<li><strong>基础数学</strong>：线性代数、概率论、微积分</li>
+</ul>
+<h2 id="_4">章节概览</h2>
+<h3 id="_5">第一部分：基础篇</h3>
+<p><strong><a href="chapter1.html">第 1 章：VLM 架构与原理</a></strong></p>
+<ul>
+<li>视觉编码器与语言模型的融合策略</li>
+<li>主流 VLM 架构对比（CLIP-based、Flamingo、LLaVA、BLIP）</li>
+<li>多模态对齐的关键技术</li>
+<li><strong>Case Study</strong>: 从 LLaVA-1.5 到 LLaVA-NeXT 的架构演进分析</li>
+<li><strong>高级话题</strong>: 动态分辨率处理、Cross-attention vs MLP Projector 性能对比</li>
+</ul>
+<p><strong><a href="chapter2.html">第 2 章：数据准备与预处理</a></strong></p>
+<ul>
+<li>多模态数据集的收集与清洗</li>
+<li>图像-文本对的质量评估</li>
+<li>数据增强与负样本构造</li>
+<li>高效的数据加载管道设计</li>
+<li><strong>Case Study</strong>: ShareGPT4V 数据集构建流程剖析</li>
+<li><strong>高级话题</strong>: 合成数据生成、数据配比优化（interleaved vs single-turn）</li>
+</ul>
+<h3 id="_6">第二部分：监督微调篇</h3>
+<p><strong><a href="chapter3.html">第 3 章：SFT 训练策略</a></strong></p>
+<ul>
+<li>指令微调的设计原则</li>
+<li>损失函数设计与权重策略</li>
+<li>参数高效微调方法（LoRA、QLoRA、Adapter）</li>
+<li>训练稳定性与收敛技巧</li>
+<li><strong>Case Study</strong>: Qwen-VL 的三阶段训练策略实战</li>
+<li><strong>高级话题</strong>: 视觉编码器解冻时机、LoRA rank 自适应选择</li>
+</ul>
+<p><strong><a href="chapter4.html">第 4 章：分布式训练与优化</a></strong></p>
+<ul>
+<li>数据并行与模型并行策略</li>
+<li>梯度累积与混合精度训练</li>
+<li>内存优化技术（零拷贝、CPU offloading）</li>
+<li>训练监控与调试（Wandb、Tensorboard 实战）</li>
+<li><strong>Case Study</strong>: InternVL 2.0 的 8×H100 训练配置分析</li>
+<li><strong>高级话题</strong>: Pipeline 并行在 VLM 中的挑战、ZeRO-3 vs FSDP 实测对比</li>
+</ul>
+<h3 id="_7">第三部分：强化学习篇</h3>
+<p><strong><a href="chapter5.html">第 5 章：RLHF 基础与实现</a></strong></p>
+<ul>
+<li>奖励模型的训练</li>
+<li>PPO 算法在 VLM 中的应用</li>
+<li>KL 散度约束与正则化</li>
+<li>训练不稳定性的解决方案</li>
+<li><strong>Case Study</strong>: LLaVA-RLHF 的人类偏好对齐实践</li>
+<li><strong>高级话题</strong>: 多模态奖励建模、幻觉惩罚设计</li>
+</ul>
+<p><strong><a href="chapter6.html">第 6 章：直接偏好优化（DPO）</a></strong></p>
+<ul>
+<li>DPO 算法原理与优势</li>
+<li>偏好数据的构造</li>
+<li>DPO vs RLHF 的实践对比</li>
+<li>多目标优化与权衡</li>
+<li><strong>Case Study</strong>: Bunny 模型的 DPO 训练流程解析</li>
+<li><strong>高级话题</strong>: IPO、KTO 等 DPO 变体比较、拒绝采样策略</li>
+</ul>
+<h3 id="_8">第四部分：评估与部署篇</h3>
+<p><strong><a href="chapter7.html">第 7 章：评估体系设计</a></strong></p>
+<ul>
+<li>多模态基准测试介绍</li>
+<li>自动评估指标设计</li>
+<li>人工评估的组织与分析</li>
+<li>A/B 测试与在线评估</li>
+<li><strong>Case Study</strong>: MMBench 评测体系深度解读</li>
+<li><strong>高级话题</strong>: 幻觉评估方法、Chain-of-Thought 评测设计</li>
+</ul>
+<p><strong><a href="chapter8.html">第 8 章：模型部署与服务化</a></strong></p>
+<ul>
+<li>模型量化与压缩</li>
+<li>推理优化技术</li>
+<li>服务化架构设计</li>
+<li>监控与迭代优化</li>
+<li><strong>Case Study</strong>: vLLM 部署 VLM 的最佳实践</li>
+<li><strong>高级话题</strong>: AWQ vs GPTQ 量化对比、动态 batching 优化</li>
+</ul>
+<h3 id="_9">第五部分：工程实战篇</h3>
+<p><strong><a href="chapter9.html">第 9 章：CUDA OOM 调试完全指南</a></strong></p>
+<ul>
+<li>快速诊断内存占用（模型、梯度、激活值、优化器状态）</li>
+<li>紧急处理方案（gradient checkpointing、batch size 动态调整）</li>
+<li>内存分析工具使用（torch.cuda.memory_summary、nvidia-smi）</li>
+<li>VLM 特有的内存陷阱（视觉编码器、注意力矩阵爆炸）</li>
+</ul>
+<p><strong><a href="chapter10.html">第 10 章：训练崩溃与 NaN 问题</a></strong></p>
+<ul>
+<li>Loss 爆炸的 5 分钟排查流程</li>
+<li>梯度监控与异常值定位</li>
+<li>混合精度训练的稳定性技巧</li>
+<li>Checkpoint 恢复与断点续训</li>
+</ul>
+<p><strong><a href="chapter11.html">第 11 章：训练速度优化实战</a></strong></p>
+<ul>
+<li>Profile 工具定位性能瓶颈</li>
+<li>数据加载优化（预取、缓存、并行化）</li>
+<li>通信开销优化（梯度累积、All-Reduce 优化）</li>
+<li>Flash Attention 与 xFormers 实践</li>
+</ul>
+<p><strong><a href="chapter12.html">第 12 章：多机多卡调试地狱</a></strong></p>
+<ul>
+<li>NCCL 错误的常见原因与解决</li>
+<li>进程同步与死锁排查</li>
+<li>不同 GPU 型号混合训练的坑</li>
+<li>FSDP vs DeepSpeed 实战对比</li>
+</ul>
+<h2 id="_10">如何使用本教程</h2>
+<h3 id="_11">学习路径建议</h3>
+<ol>
+<li>
+<p><strong>遇到问题急救</strong>：正在训练中遇到 OOM、NaN、速度慢？直接跳转到第 9-12 章，5 分钟内找到解决方案。</p>
+</li>
+<li>
+<p><strong>快速入门</strong>：如果您急于开始实践，可以直接从第 3 章（SFT 训练策略）开始，配合第 9-12 章解决具体问题。</p>
+</li>
+<li>
+<p><strong>系统学习</strong>：建议按章节顺序学习，每章的练习题都经过精心设计，帮助巩固关键概念。</p>
+</li>
+<li>
+<p><strong>专题深入</strong>：如果您只对特定主题感兴趣（如 RLHF），可以直接跳转到相关章节，但建议先阅读第 1 章了解 VLM 基础。</p>
+</li>
+</ol>
+<h3 id="_12">💊 快速问题定位</h3>
+<p>遇到问题？按以下顺序排查：</p>
+<div class="codehilite"><pre><span></span><code>训练报错？
+├── CUDA OOM → 第 9 章
+├── Loss NaN/Inf → 第 10 章  
+├── 训练很慢 → 第 11 章
+└── 多卡问题 → 第 12 章
+
+性能问题？
+├── GPU 利用率低 → 第 4 章 + 第 11 章
+├── 显存浪费 → 第 3 章（LoRA 部分）+ 第 9 章
+└── 推理太慢 → 第 8 章
+
+效果问题？
+├── 过拟合 → 第 2 章（数据增强）+ 第 3 章（正则化）
+├── 不收敛 → 第 3 章（损失设计）+ 第 10 章
+└── 对齐问题 → 第 5、6 章（RLHF/DPO）
+</code></pre></div>
+
+<h3 id="_13">练习题说明</h3>
+<p>每章包含 6-8 道练习题，分为：</p>
+<ul>
+<li><strong>基础题</strong>：检验对概念的理解</li>
+<li><strong>挑战题</strong>：探索更深层的问题和实际应用</li>
+</ul>
+<p>所有练习题都提供：</p>
+<ul>
+<li>💡 <strong>提示（Hint）</strong>：引导思考方向</li>
+<li>📝 <strong>参考答案</strong>：详细的解答思路（默认折叠）</li>
+</ul>
+<h3 id="_14">代码示例</h3>
+<p>本教程的代码示例以概念说明为主，不提供完整的训练脚本。建议结合开源框架（如 Transformers、TRL）进行实践。</p>
+<h2 id="_15">🛠️ 工程实践检查清单</h2>
+<p><strong>训练前检查</strong></p>
+<ul>
+<li>[ ] 数据集是否有损坏图片？（使用验证脚本）</li>
+<li>[ ] Tokenizer 是否正确处理特殊符号？</li>
+<li>[ ] 是否设置了合理的 gradient clipping？</li>
+<li>[ ] 是否准备了 validation 数据监控过拟合？</li>
+</ul>
+<p><strong>训练中监控</strong></p>
+<ul>
+<li>[ ] GPU 利用率是否超过 90%？</li>
+<li>[ ] 是否出现显存碎片化？</li>
+<li>[ ] Loss 曲线是否异常震荡？</li>
+<li>[ ] 学习率调度是否生效？</li>
+</ul>
+<p><strong>训练后验证</strong></p>
+<ul>
+<li>[ ] 模型是否能正确处理边界案例？</li>
+<li>[ ] 推理速度是否满足要求？</li>
+<li>[ ] 量化后精度损失是否可接受？</li>
+</ul>
+<h2 id="_16">配套资源</h2>
+<ul>
+<li><strong>数据集清单</strong>：常用多模态数据集的获取方式和特点</li>
+<li><strong>论文阅读列表</strong>：每章推荐的扩展阅读材料</li>
+<li><strong>代码片段库</strong>：可直接复用的调试和优化代码</li>
+<li><strong>社区案例集</strong>：真实项目的踩坑记录与解决方案</li>
+</ul>
+<h2 id="_17">更新说明</h2>
+<p>本教程将持续更新，跟踪 VLM 领域的最新进展。如有疑问或建议，欢迎提出反馈。</p>
+<hr />
+<p><em>让我们开始这段探索视觉语言模型的旅程！</em></p>
+<p><a href="chapter1.html">开始学习第 1 章 →</a></p>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter1.html" class="nav-link next">第 1 章：VLM 架构与原理 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

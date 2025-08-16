@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第 8 章：模型部署与服务化</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">视觉语言模型（VLM）的监督微调与强化学习实战教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 1 章：VLM 架构与原理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 2 章：数据准备与预处理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 3 章：SFT 训练策略</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 4 章：分布式训练与优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 5 章：RLHF 基础与实现</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 6 章：直接偏好优化（DPO）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 7 章：评估体系设计</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 8 章：模型部署与服务化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 9 章：CUDA OOM 调试完全指南</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 10 章：训练崩溃与 NaN 问题</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 11 章：训练速度优化实战</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 12 章：多机多卡调试地狱</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="8">第 8 章：模型部署与服务化</h1>
+<p>将训练好的 VLM 模型高效部署到生产环境是整个项目落地的关键环节。本章将系统介绍从模型优化到服务化部署的完整流程，重点关注如何在保证推理精度的前提下，最大程度提升推理速度和降低资源消耗。我们将深入探讨量化技术、推理优化、服务架构设计以及生产环境的监控与迭代策略。</p>
+<h2 id="81">8.1 模型量化与压缩</h2>
+<h3 id="811">8.1.1 量化基础理论</h3>
+<p>模型量化通过降低权重和激活值的数值精度来减少模型大小和计算开销。对于 VLM 模型，量化策略需要同时考虑视觉编码器和语言模型两部分的特性。</p>
+<p><strong>量化的数学表示</strong>：</p>
+<p>对于权重 $W \in \mathbb{R}^{m \times n}$，量化过程可表示为：</p>
+<p>$$W_q = \text{round}\left(\frac{W - Z}{S}\right)$$
+其中 $S$ 是缩放因子（scale），$Z$ 是零点（zero point），$W_q$ 是量化后的整数权重。</p>
+<p>反量化过程：
+$$W_{dq} = S \cdot W_q + Z$$</p>
+<h3 id="812-int8">8.1.2 INT8 量化实践</h3>
+<p>INT8 量化是最常用的量化方案，可以将模型大小减少 75%，推理速度提升 2-4 倍。</p>
+<p><strong>对称量化 vs 非对称量化</strong>：</p>
+<div class="codehilite"><pre><span></span><code>对称量化（Symmetric）:
+    范围: [-127, 127]
+    零点 Z = 0
+    适用: 权重量化
+
+非对称量化（Asymmetric）:
+    范围: [0, 255]  
+    零点 Z ≠ 0
+    适用: 激活值量化
+</code></pre></div>
+
+<p><strong>VLM 特有的量化挑战</strong>：</p>
+<ol>
+<li>
+<p><strong>视觉编码器的量化敏感性</strong>：
+   - ViT 的自注意力层对量化更敏感
+   - Patch embedding 层通常保持 FP16
+   - 建议: 视觉编码器使用 INT8 动态量化</p>
+</li>
+<li>
+<p><strong>跨模态投影层的处理</strong>：
+   - MLP projector 是精度瓶颈
+   - 建议保持 FP16 或使用更高比特量化</p>
+</li>
+<li>
+<p><strong>混合精度策略</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>模型组件量化配置:
+├── 视觉编码器: INT8 动态量化
+├── 投影层: FP16 保持
+├── 语言模型
+│   ├── Embedding: INT8
+│   ├── Attention: INT8 + FP16 (QK计算)
+│   └── FFN: INT8
+└── LM Head: FP16 (关键层保护)
+</code></pre></div>
+
+<h3 id="813-gptq">8.1.3 GPTQ 量化技术</h3>
+<p>GPTQ（Gradient-based Post-training Quantization）通过优化重构误差实现高质量的 4-bit 量化。</p>
+<p><strong>GPTQ 核心算法</strong>：</p>
+<p>优化目标：
+$$\min_{W_q} ||WX - W_qX||_2^2$$
+其中 $X$ 是校准数据，通过逐层优化最小化重构误差。</p>
+<p><strong>实施步骤</strong>：</p>
+<ol>
+<li>
+<p><strong>准备校准数据集</strong>（关键）：
+   - 使用 100-200 个代表性样本
+   - 必须包含图像-文本对
+   - 覆盖不同任务类型</p>
+</li>
+<li>
+<p><strong>逐层量化流程</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>for layer in model.layers:
+    # 收集该层输入激活值
+    X = collect_activations(layer, calibration_data)
+
+    # 计算 Hessian 矩阵
+    H = 2 * X @ X.T
+
+    # 逐列量化权重
+    for col in range(W.shape[1]):
+        w_q = quantize_column(W[:, col], H)
+        # 更新剩余列以补偿量化误差
+        update_remaining_columns(W, w_q, col)
+</code></pre></div>
+
+<ol start="3">
+<li><strong>Group-wise 量化</strong>：
+   - 将权重分组（通常 128 个权重一组）
+   - 每组独立计算 scale 和 zero point
+   - 平衡压缩率和精度</li>
+</ol>
+<h3 id="814-awq">8.1.4 AWQ 量化技术</h3>
+<p>AWQ（Activation-aware Weight Quantization）通过激活值感知的权重缩放提升量化质量。</p>
+<p><strong>AWQ 核心创新</strong>：</p>
+<p>基于观察：权重的重要性与对应激活值的大小相关。</p>
+<p>缩放策略：
+$$W_{scaled} = W \cdot \text{diag}(s)$$
+$$X_{scaled} = X \cdot \text{diag}(s^{-1})$$
+其中 $s$ 是根据激活值统计计算的缩放因子。</p>
+<p><strong>AWQ vs GPTQ 对比</strong>：</p>
+<p>| 特性 | AWQ | GPTQ |</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>AWQ</th>
+<th>GPTQ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>量化速度</td>
+<td>快（10-20分钟）</td>
+<td>慢（1-2小时）</td>
+</tr>
+<tr>
+<td>推理速度</td>
+<td>更快（硬件友好）</td>
+<td>较快</td>
+</tr>
+<tr>
+<td>精度保持</td>
+<td>优秀（4-bit）</td>
+<td>优秀（4-bit）</td>
+</tr>
+<tr>
+<td>显存占用</td>
+<td>更低</td>
+<td>较低</td>
+</tr>
+<tr>
+<td>实现复杂度</td>
+<td>中等</td>
+<td>较高</td>
+</tr>
+</tbody>
+</table>
+<h3 id="815">8.1.5 量化方案选择指南</h3>
+<div class="codehilite"><pre><span></span><code>决策树：
+显存充足？
+├── 是 → FP16/BF16 推理
+└── 否 → 需要量化
+    ├── 延迟敏感？
+    │   ├── 是 → INT8 量化（最快）
+    │   └── 否 → 继续评估
+    └── 精度要求？
+        ├── 高 → GPTQ 4-bit
+        └── 中 → AWQ 4-bit（推荐）
+</code></pre></div>
+
+<h2 id="82">8.2 推理优化技术</h2>
+<h3 id="821-kv-cache">8.2.1 KV Cache 优化</h3>
+<p>KV Cache 是 Transformer 推理的核心优化，对 VLM 尤其重要。</p>
+<p><strong>内存占用计算</strong>：
+$$M_{kv} = 2 \times L \times H \times D \times (N_{text} + N_{image}) \times B \times P$$
+其中：</p>
+<ul>
+<li>$L$: 层数</li>
+<li>$H$: 注意力头数  </li>
+<li>$D$: 每个头的维度</li>
+<li>$N_{text}$, $N_{image}$: 文本和图像 token 数</li>
+<li>$B$: batch size</li>
+<li>$P$: 精度字节数</li>
+</ul>
+<p><strong>优化策略</strong>：</p>
+<ol>
+<li><strong>PagedAttention</strong>（vLLM 核心）：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>传统 KV Cache:
+[连续内存块] → 浪费严重
+
+PagedAttention:
+[页表管理] → [按需分配] → [内存共享]
+优势: 减少 50-80% 内存浪费
+</code></pre></div>
+
+<ol start="2">
+<li>
+<p><strong>Multi-Query Attention (MQA)</strong>：
+   - 所有查询头共享一组 KV
+   - 内存减少 $H$ 倍
+   - 速度提升 30-50%</p>
+</li>
+<li>
+<p><strong>Grouped-Query Attention (GQA)</strong>：
+   - 折中方案：$G$ 组共享 KV
+   - 平衡速度和质量</p>
+</li>
+</ol>
+<h3 id="822-flash-attention">8.2.2 Flash Attention 集成</h3>
+<p>Flash Attention 通过 IO 优化大幅提升注意力计算效率。</p>
+<p><strong>核心优化</strong>：</p>
+<ol>
+<li><strong>分块计算</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 伪代码展示原理</span>
+<span class="k">def</span> <span class="nf">flash_attention</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">block_size</span><span class="o">=</span><span class="mi">64</span><span class="p">):</span>
+    <span class="c1"># 分块遍历，减少 HBM 访问</span>
+    <span class="k">for</span> <span class="n">q_block</span> <span class="ow">in</span> <span class="n">split</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span> <span class="n">block_size</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">kv_block</span> <span class="ow">in</span> <span class="n">split</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">block_size</span><span class="p">):</span>
+            <span class="c1"># 在 SRAM 中计算</span>
+            <span class="n">attn_block</span> <span class="o">=</span> <span class="n">softmax</span><span class="p">(</span><span class="n">q_block</span> <span class="o">@</span> <span class="n">kv_block</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+            <span class="n">out_block</span> <span class="o">=</span> <span class="n">attn_block</span> <span class="o">@</span> <span class="n">v_block</span>
+            <span class="c1"># 增量更新结果</span>
+            <span class="n">update_output</span><span class="p">(</span><span class="n">out_block</span><span class="p">)</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>VLM 特殊考虑</strong>：
+   - 图像 token 通常连续且数量固定
+   - 可以预计算图像部分的注意力
+   - 文本生成时只更新文本部分</li>
+</ol>
+<p><strong>性能提升</strong>：</p>
+<ul>
+<li>速度: 2-4× 提升</li>
+<li>显存: 线性而非二次增长</li>
+<li>长序列: 支持 32K+ token</li>
+</ul>
+<h3 id="823-batching">8.2.3 动态 Batching 优化</h3>
+<p>动态 batching 是提高吞吐量的关键技术。</p>
+<p><strong>实现策略</strong>：</p>
+<ol>
+<li><strong>Continuous Batching</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>传统 Static Batching:
+[等待所有请求完成] → GPU 利用率低
+
+Continuous Batching:
+[持续加入新请求] → [动态调度] → GPU 利用率高
+</code></pre></div>
+
+<ol start="2">
+<li>
+<p><strong>VLM 特有挑战</strong>：
+   - 图像预处理时间不一致
+   - 图像 token 数量可变（动态分辨率）
+   - 需要平衡视觉编码和文本生成</p>
+</li>
+<li>
+<p><strong>优化方案</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">VLMBatchScheduler</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">requests</span><span class="p">):</span>
+        <span class="c1"># 按图像大小分组</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="n">group_by_image_size</span><span class="p">(</span><span class="n">requests</span><span class="p">)</span>
+
+        <span class="c1"># 视觉编码批处理</span>
+        <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+            <span class="n">vision_features</span> <span class="o">=</span> <span class="n">batch_encode_images</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+            <span class="n">cache_features</span><span class="p">(</span><span class="n">vision_features</span><span class="p">)</span>
+
+        <span class="c1"># 文本生成动态batching</span>
+        <span class="k">while</span> <span class="n">active_requests</span><span class="p">:</span>
+            <span class="n">batch</span> <span class="o">=</span> <span class="n">select_compatible_requests</span><span class="p">()</span>
+            <span class="n">tokens</span> <span class="o">=</span> <span class="n">generate_batch</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+            <span class="n">update_requests</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">tokens</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="824-speculative-decoding">8.2.4 投机解码（Speculative Decoding）</h3>
+<p>使用小模型加速大模型推理。</p>
+<p><strong>原理</strong>：</p>
+<ol>
+<li>小模型快速生成候选 token</li>
+<li>大模型并行验证</li>
+<li>接受/拒绝候选结果</li>
+</ol>
+<p><strong>VLM 适配</strong>：</p>
+<ul>
+<li>视觉编码器可以共享</li>
+<li>仅语言模型部分使用投机解码</li>
+<li>典型加速: 2-3×</li>
+</ul>
+<h2 id="83">8.3 服务化架构设计</h2>
+<h3 id="831">8.3.1 整体架构</h3>
+<div class="codehilite"><pre><span></span><code>┌─────────────────────────────────────┐
+│         Load Balancer               │
+└────────────┬────────────────────────┘
+             │
+    ┌────────┴────────┐
+    │                 │
+┌───▼───┐       ┌────▼────┐
+│ API   │       │  API    │
+│Server │       │ Server  │
+└───┬───┘       └────┬────┘
+    │                │
+    └────────┬───────┘
+             │
+    ┌────────▼────────┐
+    │  Request Queue  │
+    └────────┬────────┘
+             │
+    ┌────────▼────────────┐
+    │  Inference Engine   │
+    │  ┌──────────────┐  │
+    │  │ Vision       │  │
+    │  │ Encoder Pool │  │
+    │  └──────┬───────┘  │
+    │         │          │
+    │  ┌──────▼───────┐  │
+    │  │   Language   │  │
+    │  │  Model Pool  │  │
+    │  └──────────────┘  │
+    └─────────────────────┘
+</code></pre></div>
+
+<h3 id="832">8.3.2 关键组件设计</h3>
+<p><strong>1. 请求路由层</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">RequestRouter</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">route</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="c1"># 根据模型版本路由</span>
+        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">model_version</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">version_pools</span><span class="p">[</span><span class="n">request</span><span class="o">.</span><span class="n">model_version</span><span class="p">]</span>
+
+        <span class="c1"># 根据负载均衡</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">select_least_loaded</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">health_check</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># 定期检查后端健康状态</span>
+        <span class="k">for</span> <span class="n">backend</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">backends</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">backend</span><span class="o">.</span><span class="n">is_healthy</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">remove_backend</span><span class="p">(</span><span class="n">backend</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>2. 缓存策略</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">VLMCache</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># 图像特征缓存</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vision_cache</span> <span class="o">=</span> <span class="n">LRUCache</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
+        <span class="c1"># Prompt 缓存</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prompt_cache</span> <span class="o">=</span> <span class="n">LRUCache</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_vision_features</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_hash</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">image_hash</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vision_cache</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vision_cache</span><span class="p">[</span><span class="n">image_hash</span><span class="p">]</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">cache_vision_features</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_hash</span><span class="p">,</span> <span class="n">features</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vision_cache</span><span class="p">[</span><span class="n">image_hash</span><span class="p">]</span> <span class="o">=</span> <span class="n">features</span>
+</code></pre></div>
+
+<p><strong>3. 资源管理</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ResourceManager</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">allocate_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">required_memory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimate_memory</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="c1"># 等待资源可用</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_available_memory</span><span class="p">(</span><span class="n">required_memory</span><span class="p">):</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+
+        <span class="c1"># 分配资源</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_memory</span> <span class="o">+=</span> <span class="n">required_memory</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_request</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="833">8.3.3 高可用设计</h3>
+<p><strong>1. 模型热更新</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ModelManager</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">update_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_model_path</span><span class="p">):</span>
+        <span class="c1"># 加载新模型</span>
+        <span class="n">new_model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="n">new_model_path</span><span class="p">)</span>
+
+        <span class="c1"># 逐步切换流量</span>
+        <span class="k">for</span> <span class="n">ratio</span> <span class="ow">in</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">traffic_ratio</span> <span class="o">=</span> <span class="n">ratio</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>  <span class="c1"># 观察指标</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_errors</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+                <span class="k">break</span>
+</code></pre></div>
+
+<p><strong>2. 故障恢复</strong>：
+- 请求重试机制
+- 降级策略（使用更小模型）
+- 熔断保护</p>
+<h3 id="834-api">8.3.4 API 设计</h3>
+<p><strong>RESTful API 示例</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/v1/chat/completions&quot;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">chat_completion</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">ChatRequest</span><span class="p">):</span>
+    <span class="c1"># 请求验证</span>
+    <span class="n">validate_request</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+    <span class="c1"># 图像预处理</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">images</span><span class="p">:</span>
+        <span class="n">vision_features</span> <span class="o">=</span> <span class="k">await</span> <span class="n">encode_images</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">images</span><span class="p">)</span>
+
+    <span class="c1"># 生成响应</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">generate_response</span><span class="p">(</span>
+        <span class="n">prompt</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">messages</span><span class="p">,</span>
+        <span class="n">vision_features</span><span class="o">=</span><span class="n">vision_features</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">request</span><span class="o">.</span><span class="n">parameters</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">response</span>
+</code></pre></div>
+
+<p><strong>流式响应</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/v1/chat/completions/stream&quot;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">stream_chat_completion</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">ChatRequest</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">generate</span><span class="p">():</span>
+        <span class="k">async</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">generate_tokens</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="sa">f</span><span class="s2">&quot;data: </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s1">&#39;token&#39;</span><span class="p">:</span><span class="w"> </span><span class="n">token</span><span class="p">})</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+
+    <span class="k">return</span> <span class="n">StreamingResponse</span><span class="p">(</span><span class="n">generate</span><span class="p">(),</span> <span class="n">media_type</span><span class="o">=</span><span class="s2">&quot;text/event-stream&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h2 id="84">8.4 监控与迭代优化</h2>
+<h3 id="841">8.4.1 关键指标监控</h3>
+<p><strong>性能指标</strong>：</p>
+<ol>
+<li>
+<p><strong>延迟指标</strong>：
+   - TTFT (Time To First Token): 首个 token 延迟
+   - TPS (Tokens Per Second): 生成速度
+   - E2E Latency: 端到端延迟</p>
+</li>
+<li>
+<p><strong>吞吐量指标</strong>：
+   - QPS (Queries Per Second)
+   - GPU 利用率
+   - 内存使用率</p>
+</li>
+<li>
+<p><strong>质量指标</strong>：
+   - 生成质量评分
+   - 错误率
+   - 用户满意度</p>
+</li>
+</ol>
+<p><strong>监控实现</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">MetricsCollector</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;ttft&#39;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s1">&#39;tps&#39;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s1">&#39;gpu_util&#39;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s1">&#39;memory_usage&#39;</span><span class="p">:</span> <span class="p">[]</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">record_inference</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request_id</span><span class="p">,</span> <span class="n">start_time</span><span class="p">,</span> <span class="n">tokens</span><span class="p">):</span>
+        <span class="n">ttft</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+        <span class="n">tps</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;ttft&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ttft</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;tps&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tps</span><span class="p">)</span>
+
+        <span class="c1"># 记录到 Prometheus</span>
+        <span class="n">TTFT_HISTOGRAM</span><span class="o">.</span><span class="n">observe</span><span class="p">(</span><span class="n">ttft</span><span class="p">)</span>
+        <span class="n">TPS_GAUGE</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">tps</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="842">8.4.2 性能分析工具</h3>
+<p><strong>1. GPU 性能分析</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 使用 nsys 进行性能分析</span>
+nsys<span class="w"> </span>profile<span class="w"> </span>-o<span class="w"> </span>model_profile<span class="w"> </span>python<span class="w"> </span>inference_server.py
+
+<span class="c1"># 使用 nvprof 分析 kernel 执行</span>
+nvprof<span class="w"> </span>--print-gpu-trace<span class="w"> </span>python<span class="w"> </span>benchmark.py
+</code></pre></div>
+
+<p><strong>2. 内存分析</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">analyze_memory</span><span class="p">():</span>
+    <span class="c1"># 显存快照</span>
+    <span class="n">snapshot</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">memory_snapshot</span><span class="p">()</span>
+
+    <span class="c1"># 分析内存分配</span>
+    <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">snapshot</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">block</span><span class="p">[</span><span class="s1">&#39;allocated&#39;</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Size: </span><span class="si">{</span><span class="n">block</span><span class="p">[</span><span class="s1">&#39;size&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, Stream: </span><span class="si">{</span><span class="n">block</span><span class="p">[</span><span class="s1">&#39;stream&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># 内存统计</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Allocated: </span><span class="si">{</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">memory_allocated</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e9</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> GB&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Reserved: </span><span class="si">{</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">memory_reserved</span><span class="p">()</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e9</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> GB&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="843-ab">8.4.3 A/B 测试框架</h3>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">ABTestManager</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">experiments</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">create_experiment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">variants</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">experiments</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;variants&#39;</span><span class="p">:</span> <span class="n">variants</span><span class="p">,</span>
+            <span class="s1">&#39;metrics&#39;</span><span class="p">:</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">route_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">):</span>
+        <span class="c1"># 基于用户 ID 的一致性哈希</span>
+        <span class="n">user_hash</span> <span class="o">=</span> <span class="nb">hash</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user_id</span><span class="p">)</span>
+        <span class="n">variant_index</span> <span class="o">=</span> <span class="n">user_hash</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">experiments</span><span class="p">[</span><span class="n">experiment_name</span><span class="p">][</span><span class="s1">&#39;variants&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">experiments</span><span class="p">[</span><span class="n">experiment_name</span><span class="p">][</span><span class="s1">&#39;variants&#39;</span><span class="p">][</span><span class="n">variant_index</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">record_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">,</span> <span class="n">variant</span><span class="p">,</span> <span class="n">metric_name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">experiments</span><span class="p">[</span><span class="n">experiment_name</span><span class="p">][</span><span class="s1">&#39;metrics&#39;</span><span class="p">][</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">variant</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">metric_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="844">8.4.4 自动优化策略</h3>
+<p><strong>1. 动态批大小调整</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">DynamicBatchSizer</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_batch_size</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latency_history</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">adjust_batch_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">avg_latency</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latency_history</span><span class="p">[</span><span class="o">-</span><span class="mi">100</span><span class="p">:])</span>
+
+        <span class="k">if</span> <span class="n">avg_latency</span> <span class="o">&lt;</span> <span class="n">TARGET_LATENCY</span> <span class="o">*</span> <span class="mf">0.8</span><span class="p">:</span>
+            <span class="c1"># 延迟充裕，增加批大小</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_batch_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_batch_size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">MAX_BATCH</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">avg_latency</span> <span class="o">&gt;</span> <span class="n">TARGET_LATENCY</span><span class="p">:</span>
+            <span class="c1"># 延迟超标，减小批大小</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_batch_size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_batch_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>2. 模型副本自动扩缩容</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">AutoScaler</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">scale_decision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metrics</span><span class="p">):</span>
+        <span class="c1"># 基于队列长度和延迟决策</span>
+        <span class="k">if</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;queue_length&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">QUEUE_THRESHOLD</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;scale_up&#39;</span>
+        <span class="k">elif</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;avg_gpu_util&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;scale_down&#39;</span>
+        <span class="k">return</span> <span class="s1">&#39;maintain&#39;</span>
+</code></pre></div>
+
+<h2 id="case-study-vllm-vlm">Case Study: vLLM 部署 VLM 的最佳实践</h2>
+<h3 id="_1">背景介绍</h3>
+<p>vLLM 是目前最流行的 LLM 推理框架之一，通过 PagedAttention 等创新显著提升了推理效率。本案例将详细介绍如何使用 vLLM 部署 LLaVA-NeXT 模型。</p>
+<h3 id="_2">环境准备</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 安装 vLLM (支持 VLM)</span>
+pip<span class="w"> </span>install<span class="w"> </span>vllm&gt;<span class="o">=</span><span class="m">0</span>.3.0
+
+<span class="c1"># 验证 GPU 支持</span>
+python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import torch; print(torch.cuda.get_device_capability())&quot;</span>
+<span class="c1"># 需要 compute capability &gt;= 7.0</span>
+</code></pre></div>
+
+<h3 id="_3">模型部署配置</h3>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">vllm</span> <span class="kn">import</span> <span class="n">LLM</span><span class="p">,</span> <span class="n">SamplingParams</span>
+<span class="kn">from</span> <span class="nn">vllm.multimodal</span> <span class="kn">import</span> <span class="n">MultiModalData</span>
+
+<span class="k">class</span> <span class="nc">VLMDeployment</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">llm</span> <span class="o">=</span> <span class="n">LLM</span><span class="p">(</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model_path</span><span class="p">,</span>
+            <span class="c1"># 关键参数配置</span>
+            <span class="n">tensor_parallel_size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>  <span class="c1"># TP 并行度</span>
+            <span class="n">max_model_len</span><span class="o">=</span><span class="mi">4096</span><span class="p">,</span>      <span class="c1"># 最大序列长度</span>
+            <span class="n">gpu_memory_utilization</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>  <span class="c1"># GPU 内存利用率</span>
+
+            <span class="c1"># VLM 特定配置</span>
+            <span class="n">image_input_type</span><span class="o">=</span><span class="s2">&quot;pixel_values&quot;</span><span class="p">,</span>
+            <span class="n">image_token_id</span><span class="o">=</span><span class="mi">32000</span><span class="p">,</span>
+            <span class="n">image_input_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">336</span><span class="p">,</span> <span class="mi">336</span><span class="p">),</span>
+            <span class="n">image_feature_size</span><span class="o">=</span><span class="mi">576</span><span class="p">,</span>  <span class="c1"># 24*24 patches</span>
+
+            <span class="c1"># 优化参数</span>
+            <span class="n">enable_prefix_caching</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># 启用前缀缓存</span>
+            <span class="n">enable_chunked_prefill</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># 分块预填充</span>
+            <span class="n">max_num_batched_tokens</span><span class="o">=</span><span class="mi">8192</span><span class="p">,</span>
+            <span class="n">max_num_seqs</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+
+            <span class="c1"># 量化配置（可选）</span>
+            <span class="n">quantization</span><span class="o">=</span><span class="s2">&quot;awq&quot;</span><span class="p">,</span>  <span class="c1"># 使用 AWQ 4-bit 量化</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampling_params</span> <span class="o">=</span> <span class="n">SamplingParams</span><span class="p">(</span>
+            <span class="n">temperature</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+            <span class="n">top_p</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+            <span class="n">max_tokens</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span>
+        <span class="p">)</span>
+</code></pre></div>
+
+<h3 id="_4">推理优化配置</h3>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. 启用 Flash Attention</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;VLLM_USE_FLASH_ATTN&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+
+<span class="c1"># 2. 配置 CUDA Graph</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;VLLM_USE_CUDA_GRAPH&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;VLLM_CUDA_GRAPH_MAX_SEQS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;32&quot;</span>
+
+<span class="c1"># 3. 调整调度策略</span>
+<span class="n">engine_args</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;scheduler_config&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;max_num_batched_tokens&quot;</span><span class="p">:</span> <span class="mi">8192</span><span class="p">,</span>
+        <span class="s2">&quot;max_num_seqs&quot;</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span>
+        <span class="s2">&quot;max_paddings&quot;</span><span class="p">:</span> <span class="mi">512</span><span class="p">,</span>
+        <span class="s2">&quot;delay_factor&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>  <span class="c1"># 控制批处理等待时间</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="_5">性能调优实战</h3>
+<p><strong>1. 批处理优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">optimized_batch_inference</span><span class="p">(</span><span class="n">requests</span><span class="p">):</span>
+    <span class="c1"># 按图像大小分组</span>
+    <span class="n">grouped</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">req</span> <span class="ow">in</span> <span class="n">requests</span><span class="p">:</span>
+        <span class="n">img_size</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">grouped</span><span class="p">[</span><span class="n">img_size</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">size</span><span class="p">,</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">grouped</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="c1"># 同尺寸图像批处理</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">llm</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+            <span class="n">prompts</span><span class="o">=</span><span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">prompt</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">],</span>
+            <span class="n">multi_modal_data</span><span class="o">=</span><span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">image</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">],</span>
+            <span class="n">sampling_params</span><span class="o">=</span><span class="n">sampling_params</span>
+        <span class="p">)</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">outputs</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">results</span>
+</code></pre></div>
+
+<p><strong>2. 内存优化</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 监控内存使用</span>
+<span class="k">def</span> <span class="nf">monitor_memory</span><span class="p">():</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="n">llm</span><span class="o">.</span><span class="n">get_model_memory_usage</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;KV Cache: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;kv_cache_usage&#39;</span><span class="p">]</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e9</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> GB&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Model Weights: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;model_weights&#39;</span><span class="p">]</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e9</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> GB&quot;</span><span class="p">)</span>
+
+    <span class="c1"># 动态调整 KV cache 大小</span>
+    <span class="k">if</span> <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;kv_cache_usage&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">MEMORY_THRESHOLD</span><span class="p">:</span>
+        <span class="n">llm</span><span class="o">.</span><span class="n">reduce_max_num_seqs</span><span class="p">(</span><span class="n">factor</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="_6">生产部署检查清单</h3>
+<ul>
+<li>[x] 配置健康检查端点</li>
+<li>[x] 实现优雅关闭机制</li>
+<li>[x] 设置请求超时</li>
+<li>[x] 配置日志和监控</li>
+<li>[x] 实现降级策略</li>
+<li>[x] 准备回滚方案</li>
+</ul>
+<h3 id="_7">性能基准测试结果</h3>
+<p>| 配置 | TTFT (ms) | TPS | QPS | GPU 利用率 |</p>
+<table>
+<thead>
+<tr>
+<th>配置</th>
+<th>TTFT (ms)</th>
+<th>TPS</th>
+<th>QPS</th>
+<th>GPU 利用率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>基础配置</td>
+<td>450</td>
+<td>42</td>
+<td>8</td>
+<td>65%</td>
+</tr>
+<tr>
+<td>+ PagedAttention</td>
+<td>380</td>
+<td>48</td>
+<td>12</td>
+<td>75%</td>
+</tr>
+<tr>
+<td>+ Flash Attention</td>
+<td>320</td>
+<td>56</td>
+<td>15</td>
+<td>82%</td>
+</tr>
+<tr>
+<td>+ AWQ 量化</td>
+<td>280</td>
+<td>68</td>
+<td>20</td>
+<td>88%</td>
+</tr>
+<tr>
+<td>+ Dynamic Batching</td>
+<td>250</td>
+<td>72</td>
+<td>28</td>
+<td>92%</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_8">高级话题</h2>
+<h3 id="awq-vs-gptq">AWQ vs GPTQ 深度对比</h3>
+<p><strong>量化精度对比实验</strong>：</p>
+<p>测试模型：LLaVA-NeXT-13B
+测试数据集：COCO Captions Validation</p>
+<p>| 量化方法 | Perplexity | BLEU-4 | 推理速度 | 显存占用 |</p>
+<table>
+<thead>
+<tr>
+<th>量化方法</th>
+<th>Perplexity</th>
+<th>BLEU-4</th>
+<th>推理速度</th>
+<th>显存占用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FP16 (基准)</td>
+<td>8.32</td>
+<td>35.2</td>
+<td>1.0x</td>
+<td>26GB</td>
+</tr>
+<tr>
+<td>INT8</td>
+<td>8.45</td>
+<td>34.8</td>
+<td>2.1x</td>
+<td>13GB</td>
+</tr>
+<tr>
+<td>GPTQ 4-bit</td>
+<td>8.68</td>
+<td>34.1</td>
+<td>3.2x</td>
+<td>8.5GB</td>
+</tr>
+<tr>
+<td>AWQ 4-bit</td>
+<td>8.59</td>
+<td>34.4</td>
+<td>3.8x</td>
+<td>8.2GB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键发现</strong>：</p>
+<ol>
+<li>
+<p><strong>AWQ 在推理速度上优势明显</strong>：
+   - 原因：权重布局更适合硬件加速
+   - kernel 实现更高效</p>
+</li>
+<li>
+<p><strong>GPTQ 在某些任务上精度略高</strong>：
+   - 特别是需要精确数值计算的任务
+   - 但差异通常 &lt; 1%</p>
+</li>
+<li>
+<p><strong>混合策略</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 对不同层使用不同量化</span>
+<span class="n">quantization_config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;vision_encoder&quot;</span><span class="p">:</span> <span class="s2">&quot;int8&quot;</span><span class="p">,</span>      <span class="c1"># 视觉编码器用 INT8</span>
+    <span class="s2">&quot;projection&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>             <span class="c1"># 投影层不量化</span>
+    <span class="s2">&quot;llm_layers_0_15&quot;</span><span class="p">:</span> <span class="s2">&quot;awq_4bit&quot;</span><span class="p">,</span> <span class="c1"># 前半部分用 AWQ</span>
+    <span class="s2">&quot;llm_layers_16_31&quot;</span><span class="p">:</span> <span class="s2">&quot;gptq_4bit&quot;</span><span class="p">,</span> <span class="c1"># 后半部分用 GPTQ</span>
+    <span class="s2">&quot;lm_head&quot;</span><span class="p">:</span> <span class="kc">None</span>                <span class="c1"># 输出层不量化</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="batching">动态 Batching 高级优化</h3>
+<p><strong>1. 请求优先级调度</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PriorityBatchScheduler</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queues</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;high&#39;</span><span class="p">:</span> <span class="n">PriorityQueue</span><span class="p">(),</span>
+            <span class="s1">&#39;normal&#39;</span><span class="p">:</span> <span class="n">Queue</span><span class="p">(),</span>
+            <span class="s1">&#39;low&#39;</span><span class="p">:</span> <span class="n">Queue</span><span class="p">()</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">schedule_next_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_batch_size</span><span class="p">):</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># 优先处理高优先级请求</span>
+        <span class="k">for</span> <span class="n">priority</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;high&#39;</span><span class="p">,</span> <span class="s1">&#39;normal&#39;</span><span class="p">,</span> <span class="s1">&#39;low&#39;</span><span class="p">]:</span>
+            <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">max_batch_size</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">queues</span><span class="p">[</span><span class="n">priority</span><span class="p">]</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+                <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queues</span><span class="p">[</span><span class="n">priority</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">batch</span>
+</code></pre></div>
+
+<p><strong>2. 自适应 Padding 策略</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">adaptive_padding</span><span class="p">(</span><span class="n">sequences</span><span class="p">):</span>
+    <span class="n">lengths</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="n">sequences</span><span class="p">]</span>
+
+    <span class="c1"># 计算最优 padding 长度</span>
+    <span class="c1"># 考虑硬件特性（如 tensor core 需要 8 的倍数）</span>
+    <span class="n">max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">lengths</span><span class="p">)</span>
+    <span class="n">optimal_len</span> <span class="o">=</span> <span class="p">((</span><span class="n">max_len</span> <span class="o">+</span> <span class="mi">7</span><span class="p">)</span> <span class="o">//</span> <span class="mi">8</span><span class="p">)</span> <span class="o">*</span> <span class="mi">8</span>
+
+    <span class="c1"># 如果浪费超过阈值，考虑分批</span>
+    <span class="n">waste_ratio</span> <span class="o">=</span> <span class="p">(</span><span class="n">optimal_len</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">sequences</span><span class="p">)</span> <span class="o">-</span> <span class="nb">sum</span><span class="p">(</span><span class="n">lengths</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">optimal_len</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">sequences</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">waste_ratio</span> <span class="o">&gt;</span> <span class="mf">0.3</span><span class="p">:</span>  <span class="c1"># 30% 浪费阈值</span>
+        <span class="c1"># 分成两批处理</span>
+        <span class="k">return</span> <span class="n">split_by_length</span><span class="p">(</span><span class="n">sequences</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">pad_sequences</span><span class="p">(</span><span class="n">sequences</span><span class="p">,</span> <span class="n">optimal_len</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>3. 预测性批处理</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">PredictiveBatcher</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">arrival_predictor</span> <span class="o">=</span> <span class="n">ArrivalRatePredictor</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">should_wait_for_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current_batch_size</span><span class="p">):</span>
+        <span class="c1"># 预测未来请求到达</span>
+        <span class="n">expected_arrivals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">arrival_predictor</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>  <span class="c1"># 100ms</span>
+
+        <span class="c1"># 计算等待收益</span>
+        <span class="n">current_efficiency</span> <span class="o">=</span> <span class="n">batch_efficiency</span><span class="p">(</span><span class="n">current_batch_size</span><span class="p">)</span>
+        <span class="n">future_efficiency</span> <span class="o">=</span> <span class="n">batch_efficiency</span><span class="p">(</span><span class="n">current_batch_size</span> <span class="o">+</span> <span class="n">expected_arrivals</span><span class="p">)</span>
+
+        <span class="c1"># 决策：等待 vs 立即处理</span>
+        <span class="k">if</span> <span class="n">future_efficiency</span> <span class="o">/</span> <span class="n">current_efficiency</span> <span class="o">&gt;</span> <span class="mf">1.2</span><span class="p">:</span>  <span class="c1"># 20% 提升阈值</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="mi">100</span>  <span class="c1"># 等待 100ms</span>
+        <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="mi">0</span>
+</code></pre></div>
+
+<h2 id="_9">本章小结</h2>
+<p>本章系统介绍了 VLM 模型从优化到部署的完整流程。我们深入探讨了以下关键技术：</p>
+<h3 id="_10">核心要点回顾</h3>
+<ol>
+<li>
+<p><strong>模型量化技术</strong>：
+   - INT8 量化可实现 2-4× 加速，适合延迟敏感场景
+   - GPTQ 和 AWQ 4-bit 量化可减少 75% 显存，精度损失 &lt; 2%
+   - 混合精度策略：视觉编码器 INT8，投影层 FP16，语言模型 4-bit</p>
+</li>
+<li>
+<p><strong>推理优化</strong>：
+   - PagedAttention 减少 50-80% KV cache 浪费
+   - Flash Attention 实现 2-4× 速度提升
+   - 动态 batching 提升 GPU 利用率至 90%+</p>
+</li>
+<li>
+<p><strong>服务化架构</strong>：
+   - 分离视觉编码和文本生成，独立扩展
+   - 实施多级缓存策略（图像特征、prompt）
+   - 支持流式响应和批处理 API</p>
+</li>
+<li>
+<p><strong>监控与优化</strong>：
+   - 关注 TTFT、TPS、QPS 三大核心指标
+   - 实施 A/B 测试验证优化效果
+   - 自动调整批大小和模型副本数</p>
+</li>
+</ol>
+<h3 id="_11">关键公式汇总</h3>
+<p><strong>量化误差</strong>：
+$$\epsilon = ||W - W_q||_F \approx \frac{\sigma_W \cdot n}{\sqrt{12} \cdot 2^b}$$
+<strong>KV Cache 内存</strong>：
+$$M_{kv} = 2LHD(N_{text} + N_{image})BP$$
+<strong>批处理效率</strong>：
+$$\eta = \frac{\sum_{i=1}^B l_i}{B \cdot \max(l_i)}$$
+<strong>推理延迟模型</strong>：
+$$T_{total} = T_{encode} + N_{tokens} \cdot T_{decode} + T_{overhead}$$</p>
+<h2 id="_12">练习题</h2>
+<h3 id="_13">基础题</h3>
+<p><strong>练习 8.1</strong>: 计算 KV Cache 内存需求</p>
+<p>一个 13B 参数的 VLM 模型，40 层，40 个注意力头，每头维度 128，处理批大小为 8，每个样本包含 576 个图像 token 和平均 512 个文本 token。使用 FP16 精度，计算 KV cache 的内存需求。</p>
+<details>
+<summary>💡 提示</summary>
+<p>使用 KV cache 内存公式，注意单位转换（GB）。</p>
+</details>
+<details>
+<summary>📝 参考答案</summary>
+<p>$$M_{kv} = 2 \times 40 \times 40 \times 128 \times (512 + 576) \times 8 \times 2$$
+$$= 2 \times 40 \times 40 \times 128 \times 1088 \times 8 \times 2$$
+$$= 3,565,158,400 \text{ bytes} \approx 3.32 \text{ GB}$$</p>
+<p>这解释了为什么 KV cache 优化如此重要。</p>
+</details>
+<p><strong>练习 8.2</strong>: AWQ 量化压缩率计算</p>
+<p>将一个 FP16 的 7B 模型量化为 AWQ 4-bit，假设模型权重占 14GB，计算：</p>
+<ol>
+<li>量化后的模型大小</li>
+<li>理论压缩率</li>
+<li>考虑额外的 scale/zero point 开销（group size = 128），实际模型大小</li>
+</ol>
+<details>
+<summary>💡 提示</summary>
+<p>4-bit 量化理论上压缩 4 倍，但需要存储额外的量化参数。</p>
+</details>
+<details>
+<summary>📝 参考答案</summary>
+<ol>
+<li>
+<p>理论量化后大小：14GB ÷ 4 = 3.5GB</p>
+</li>
+<li>
+<p>理论压缩率：16 bits / 4 bits = 4×</p>
+</li>
+<li>
+<p>实际大小计算：
+   - 每 128 个权重需要额外 32 bits (FP16 scale + zero)
+   - 开销率：32 / (128 × 4) = 6.25%
+   - 实际大小：3.5GB × 1.0625 ≈ 3.72GB
+   - 实际压缩率：14GB / 3.72GB ≈ 3.76×</p>
+</li>
+</ol>
+</details>
+<p><strong>练习 8.3</strong>: Flash Attention 内存节省</p>
+<p>传统注意力计算需要存储 N×N 的注意力矩阵，Flash Attention 通过分块计算避免这一开销。对于序列长度 4096，批大小 8，注意力头数 32，计算两种方法的峰值内存差异。</p>
+<details>
+<summary>💡 提示</summary>
+<p>传统方法需要存储完整注意力矩阵，Flash Attention 只需存储块大小的矩阵。</p>
+</details>
+<details>
+<summary>📝 参考答案</summary>
+<p>传统注意力：</p>
+<ul>
+<li>注意力矩阵：8 × 32 × 4096 × 4096 × 2 bytes (FP16)</li>
+<li>= 8,589,934,592 bytes ≈ 8 GB</li>
+</ul>
+<p>Flash Attention（块大小 64）：</p>
+<ul>
+<li>块矩阵：8 × 32 × 64 × 64 × 2 bytes</li>
+<li>= 2,097,152 bytes ≈ 2 MB</li>
+</ul>
+<p>内存节省：8 GB → 2 MB，减少 4000 倍！</p>
+</details>
+<h3 id="_14">挑战题</h3>
+<p><strong>练习 8.4</strong>: 动态 Batching 调度算法设计</p>
+<p>设计一个动态 batching 调度器，需要考虑：</p>
+<ul>
+<li>不同请求的优先级（P0/P1/P2）</li>
+<li>图像大小差异（224×224, 336×336, 448×448）</li>
+<li>最大批大小限制（32）</li>
+<li>延迟 SLA 要求（P0 &lt; 100ms, P1 &lt; 500ms, P2 &lt; 2000ms）</li>
+</ul>
+<p>请给出调度策略的伪代码。</p>
+<details>
+<summary>💡 提示</summary>
+<p>考虑多队列设计，按优先级和图像大小分组，实施抢占机制。</p>
+</details>
+<details>
+<summary>📝 参考答案</summary>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span> <span class="nc">AdaptiveBatchScheduler</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># 多维度队列</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queues</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="p">(</span><span class="n">priority</span><span class="p">,</span> <span class="n">img_size</span><span class="p">):</span> <span class="n">Queue</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">priority</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">,</span> <span class="s1">&#39;P1&#39;</span><span class="p">,</span> <span class="s1">&#39;P2&#39;</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">img_size</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">224</span><span class="p">,</span> <span class="mi">336</span><span class="p">,</span> <span class="mi">448</span><span class="p">]</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sla_timers</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">schedule_next_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">selected_size</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># 步骤1：检查 P0 紧急请求</span>
+        <span class="k">for</span> <span class="n">size</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">224</span><span class="p">,</span> <span class="mi">336</span><span class="p">,</span> <span class="mi">448</span><span class="p">]:</span>
+            <span class="n">queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">queues</span><span class="p">[(</span><span class="s1">&#39;P0&#39;</span><span class="p">,</span> <span class="n">size</span><span class="p">)]</span>
+            <span class="n">urgent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_sla_violation</span><span class="p">(</span><span class="n">queue</span><span class="p">,</span> <span class="mi">80</span><span class="p">)</span>  <span class="c1"># 80ms 警戒线</span>
+            <span class="k">if</span> <span class="n">urgent</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_batch</span><span class="p">(</span><span class="n">urgent</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+
+        <span class="c1"># 步骤2：贪心选择最优批次</span>
+        <span class="n">best_score</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">best_config</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="n">priority</span><span class="p">,</span> <span class="n">size</span><span class="p">),</span> <span class="n">queue</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">queues</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># 计算得分：队列长度 × 优先级权重 / 等待时间</span>
+            <span class="n">score</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">queue</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">priority_weight</span><span class="p">[</span><span class="n">priority</span><span class="p">]</span>
+            <span class="n">score</span> <span class="o">/=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_wait_time</span><span class="p">(</span><span class="n">queue</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">score</span> <span class="o">&gt;</span> <span class="n">best_score</span><span class="p">:</span>
+                <span class="n">best_score</span> <span class="o">=</span> <span class="n">score</span>
+                <span class="n">best_config</span> <span class="o">=</span> <span class="p">(</span><span class="n">priority</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+                <span class="n">selected_size</span> <span class="o">=</span> <span class="n">size</span>
+
+        <span class="c1"># 步骤3：构建批次</span>
+        <span class="k">if</span> <span class="n">best_config</span><span class="p">:</span>
+            <span class="c1"># 同尺寸图像打包</span>
+            <span class="n">primary_queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">queues</span><span class="p">[</span><span class="n">best_config</span><span class="p">]</span>
+            <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">32</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">primary_queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+                <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">primary_queue</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+
+            <span class="c1"># 填充相同尺寸的低优先级请求</span>
+            <span class="k">for</span> <span class="n">priority</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;P0&#39;</span><span class="p">,</span> <span class="s1">&#39;P1&#39;</span><span class="p">,</span> <span class="s1">&#39;P2&#39;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">priority</span><span class="p">,</span> <span class="n">selected_size</span><span class="p">)</span> <span class="o">!=</span> <span class="n">best_config</span><span class="p">:</span>
+                    <span class="n">queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">queues</span><span class="p">[(</span><span class="n">priority</span><span class="p">,</span> <span class="n">selected_size</span><span class="p">)]</span>
+                    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">32</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+                        <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">batch</span>
+
+    <span class="k">def</span> <span class="nf">check_sla_violation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">threshold_ms</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;检查是否有接近 SLA 违约的请求&quot;&quot;&quot;</span>
+        <span class="n">urgent</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">req</span> <span class="ow">in</span> <span class="n">queue</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">req</span><span class="o">.</span><span class="n">arrival_time</span> <span class="o">&gt;</span> <span class="n">threshold_ms</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">:</span>
+                <span class="n">urgent</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">urgent</span>
+</code></pre></div>
+
+<p>关键设计点：</p>
+<ol>
+<li>多维度队列避免头部阻塞</li>
+<li>SLA 感知的抢占调度</li>
+<li>同尺寸图像批处理提升效率</li>
+<li>动态权重平衡吞吐量和延迟</li>
+</ol>
+</details>
+<p><strong>练习 8.5</strong>: 量化策略选择</p>
+<p>你需要部署一个 34B 参数的 VLM 模型到配备 2×A100 (40GB) 的服务器。模型 FP16 权重占 68GB，预期 QPS 为 50，平均序列长度 2048。请设计完整的量化和优化方案。</p>
+<details>
+<summary>💡 提示</summary>
+<p>需要综合考虑显存限制、推理速度要求和精度保持。</p>
+</details>
+<details>
+<summary>📝 参考答案</summary>
+<p><strong>分析</strong>：</p>
+<ul>
+<li>总显存：80GB</li>
+<li>模型权重：68GB (FP16)</li>
+<li>KV Cache：约 8-10GB (批大小 16)</li>
+<li>激活值：约 4-6GB</li>
+</ul>
+<p><strong>方案设计</strong>：</p>
+<ol>
+<li><strong>混合量化策略</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># 关键层保持高精度</span>
+    <span class="s2">&quot;vision_encoder&quot;</span><span class="p">:</span> <span class="s2">&quot;int8&quot;</span><span class="p">,</span>        <span class="c1"># 14GB → 7GB</span>
+    <span class="s2">&quot;projection_layer&quot;</span><span class="p">:</span> <span class="s2">&quot;fp16&quot;</span><span class="p">,</span>      <span class="c1"># 0.5GB (不变)</span>
+    <span class="s2">&quot;llm.layers[0:8]&quot;</span><span class="p">:</span> <span class="s2">&quot;fp16&quot;</span><span class="p">,</span>      <span class="c1"># 13.5GB (不变)</span>
+    <span class="s2">&quot;llm.layers[8:32]&quot;</span><span class="p">:</span> <span class="s2">&quot;awq_4bit&quot;</span><span class="p">,</span> <span class="c1"># 40.5GB → 10GB  </span>
+    <span class="s2">&quot;lm_head&quot;</span><span class="p">:</span> <span class="s2">&quot;fp16&quot;</span>               <span class="c1"># 0.5GB (不变)</span>
+<span class="p">}</span>
+<span class="c1"># 总计：7 + 0.5 + 13.5 + 10 + 0.5 = 31.5GB</span>
+</code></pre></div>
+
+<ol start="2">
+<li>
+<p><strong>推理优化</strong>：
+- 启用 PagedAttention：KV cache 10GB → 6GB
+- 使用 Flash Attention 2
+- Continuous batching，维持批大小 12-20</p>
+</li>
+<li>
+<p><strong>部署配置</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">deployment</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;tensor_parallel&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s2">&quot;max_batch_size&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+    <span class="s2">&quot;max_seq_length&quot;</span><span class="p">:</span> <span class="mi">2048</span><span class="p">,</span>
+    <span class="s2">&quot;gpu_memory_fraction&quot;</span><span class="p">:</span> <span class="mf">0.95</span><span class="p">,</span>
+    <span class="s2">&quot;enable_cuda_graph&quot;</span><span class="p">:</span> <span class="kc">True</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol start="4">
+<li>
+<p><strong>预期性能</strong>：
+- 显存使用：31.5GB (模型) + 6GB (KV) + 4GB (激活) = 41.5GB / 80GB
+- TTFT：&lt; 200ms
+- TPS：60-80 tokens/s
+- 支持 QPS：50-60</p>
+</li>
+<li>
+<p><strong>降级方案</strong>：
+- 高负载时：批大小降至 8，全模型 4-bit
+- 紧急情况：切换至 13B 备用模型</p>
+</li>
+</ol>
+</details>
+<p><strong>练习 8.6</strong>: 推理服务故障诊断</p>
+<p>你的 VLM 推理服务出现以下症状：</p>
+<ul>
+<li>GPU 利用率只有 40%</li>
+<li>P99 延迟是 P50 的 10 倍</li>
+<li>每小时有 2-3 次 OOM 错误</li>
+<li>用户报告偶尔生成内容不完整</li>
+</ul>
+<p>请分析可能的原因并给出解决方案。</p>
+<details>
+<summary>💡 提示</summary>
+<p>从资源利用、调度策略、内存管理等多个角度分析。</p>
+</details>
+<details>
+<summary>📝 参考答案</summary>
+<p><strong>问题分析</strong>：</p>
+<ol>
+<li>
+<p><strong>GPU 利用率低 (40%)</strong>：
+   - 原因：IO 瓶颈或批处理不足
+   - 诊断：检查数据加载时间、批大小分布</p>
+</li>
+<li>
+<p><strong>P99 延迟异常</strong>：
+   - 原因：长尾请求或资源竞争
+   - 诊断：分析请求长度分布、检查是否有巨型请求</p>
+</li>
+<li>
+<p><strong>间歇性 OOM</strong>：
+   - 原因：内存泄漏或突发大请求
+   - 诊断：监控内存增长曲线、检查特定输入模式</p>
+</li>
+<li>
+<p><strong>生成不完整</strong>：
+   - 原因：超时截断或 OOM 静默失败
+   - 诊断：检查超时配置、错误处理逻辑</p>
+</li>
+</ol>
+<p><strong>解决方案</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. 优化批处理策略</span>
+<span class="k">class</span> <span class="nc">ImprovedScheduler</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_tokens_per_batch</span> <span class="o">=</span> <span class="mi">8192</span>  <span class="c1"># 总 token 限制</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_seq_length</span> <span class="o">=</span> <span class="mi">2048</span>        <span class="c1"># 单请求限制</span>
+
+    <span class="k">def</span> <span class="nf">create_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">requests</span><span class="p">):</span>
+        <span class="c1"># 按长度排序，避免 padding 浪费</span>
+        <span class="n">requests</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">tokens</span><span class="p">))</span>
+
+        <span class="n">batch</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">total_tokens</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">req</span> <span class="ow">in</span> <span class="n">requests</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">req</span><span class="o">.</span><span class="n">tokens</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_seq_length</span><span class="p">:</span>
+                <span class="c1"># 拒绝超长请求</span>
+                <span class="n">req</span><span class="o">.</span><span class="n">reject</span><span class="p">(</span><span class="s2">&quot;Sequence too long&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">req_tokens</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">req</span><span class="o">.</span><span class="n">tokens</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span> <span class="o">+</span> <span class="p">[</span><span class="n">req</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">total_tokens</span> <span class="o">+</span> <span class="n">req_tokens</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_tokens_per_batch</span><span class="p">:</span>
+                <span class="n">batch</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+                <span class="n">total_tokens</span> <span class="o">+=</span> <span class="n">req_tokens</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">break</span>
+
+        <span class="k">return</span> <span class="n">batch</span>
+
+<span class="c1"># 2. 内存保护机制</span>
+<span class="k">class</span> <span class="nc">MemoryGuard</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">memory_threshold</span> <span class="o">=</span> <span class="mf">0.85</span>
+
+    <span class="k">def</span> <span class="nf">check_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">usage</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">memory_reserved</span><span class="p">()</span> <span class="o">/</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">max_memory_allocated</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">usage</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory_threshold</span><span class="p">:</span>
+            <span class="c1"># 触发内存清理</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">empty_cache</span><span class="p">()</span>
+            <span class="c1"># 降级策略</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reduce_batch_size</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">estimate_request_memory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="c1"># 预估内存需求</span>
+        <span class="n">kv_cache</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">layers</span> <span class="o">*</span> <span class="n">heads</span> <span class="o">*</span> <span class="n">dim</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">tokens</span><span class="p">)</span>
+        <span class="n">activation</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">tokens</span><span class="p">)</span> <span class="o">*</span> <span class="n">hidden_size</span> <span class="o">*</span> <span class="mi">4</span>
+        <span class="k">return</span> <span class="n">kv_cache</span> <span class="o">+</span> <span class="n">activation</span>
+
+<span class="c1"># 3. 请求预处理和验证</span>
+<span class="k">def</span> <span class="nf">validate_request</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="c1"># 检查图像大小</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">image</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="n">MAX_IMAGE_SIZE</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">resize_image</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">image</span><span class="p">)</span>
+
+    <span class="c1"># 检查 token 长度</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">tokens</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">MAX_TOKENS</span><span class="p">:</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">tokens</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">tokens</span><span class="p">[:</span><span class="n">MAX_TOKENS</span><span class="p">]</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">add_warning</span><span class="p">(</span><span class="s2">&quot;Truncated to max length&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">request</span>
+
+<span class="c1"># 4. 监控和告警</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">middleware</span><span class="p">(</span><span class="s2">&quot;http&quot;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">monitor_middleware</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">call_next</span><span class="p">):</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="c1"># 记录请求前状态</span>
+    <span class="n">gpu_util_before</span> <span class="o">=</span> <span class="n">get_gpu_utilization</span><span class="p">()</span>
+    <span class="n">memory_before</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">memory_allocated</span><span class="p">()</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">call_next</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+    <span class="c1"># 计算指标</span>
+    <span class="n">latency</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+    <span class="n">memory_delta</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">memory_allocated</span><span class="p">()</span> <span class="o">-</span> <span class="n">memory_before</span>
+
+    <span class="c1"># 异常检测</span>
+    <span class="k">if</span> <span class="n">latency</span> <span class="o">&gt;</span> <span class="n">LATENCY_THRESHOLD</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;High latency: </span><span class="si">{</span><span class="n">latency</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">memory_delta</span> <span class="o">&gt;</span> <span class="n">MEMORY_SPIKE_THRESHOLD</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Memory spike: </span><span class="si">{</span><span class="n">memory_delta</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e9</span><span class="si">}</span><span class="s2">GB&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">response</span>
+</code></pre></div>
+
+<p><strong>具体措施</strong>：</p>
+<ol>
+<li>实施请求大小限制和预验证</li>
+<li>动态调整批大小基于内存使用</li>
+<li>分离长短请求到不同处理队列  </li>
+<li>添加详细监控和自动降级机制</li>
+<li>实施优雅的错误处理和重试</li>
+</ol>
+</details>
+<h2 id="gotchas">常见陷阱与错误 (Gotchas)</h2>
+<h3 id="1">1. 量化相关陷阱</h3>
+<p><strong>陷阱：盲目追求低比特量化</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># ❌ 错误：所有层都用 2-bit</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">quantize_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">bits</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># 精度严重下降</span>
+
+<span class="c1"># ✅ 正确：混合精度策略</span>
+<span class="n">critical_layers</span> <span class="o">=</span> <span class="n">identify_sensitive_layers</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">named_modules</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">critical_layers</span><span class="p">:</span>
+        <span class="n">quantize_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">bits</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>  <span class="c1"># 关键层保持高精度</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">quantize_layer</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">bits</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>陷阱：忽视校准数据质量</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># ❌ 错误：使用随机数据校准</span>
+<span class="n">calibration_data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+
+<span class="c1"># ✅ 正确：使用真实分布的数据</span>
+<span class="n">calibration_data</span> <span class="o">=</span> <span class="n">load_representative_samples</span><span class="p">(</span>
+    <span class="n">dataset</span><span class="p">,</span> 
+    <span class="n">n_samples</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
+    <span class="n">stratified</span><span class="o">=</span><span class="kc">True</span>  <span class="c1"># 确保覆盖各种情况</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3 id="2">2. 推理优化陷阱</h3>
+<p><strong>陷阱：过度优化单一指标</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># ❌ 错误：只优化吞吐量，忽视延迟</span>
+<span class="n">config</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;max_batch_size&quot;</span><span class="p">:</span> <span class="mi">128</span><span class="p">}</span>  <span class="c1"># P99 延迟爆炸</span>
+
+<span class="c1"># ✅ 正确：平衡多个指标</span>
+<span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;max_batch_size&quot;</span><span class="p">:</span> <span class="mi">32</span><span class="p">,</span>
+    <span class="s2">&quot;max_wait_time&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>  <span class="c1"># ms</span>
+    <span class="s2">&quot;target_latency&quot;</span><span class="p">:</span> <span class="mi">200</span>  <span class="c1"># ms</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>陷阱：KV Cache 内存泄漏</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># ❌ 错误：不清理已完成请求的 cache</span>
+<span class="n">kv_cache</span><span class="p">[</span><span class="n">request_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_kv</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+<span class="c1"># 请求完成后未删除...</span>
+
+<span class="c1"># ✅ 正确：及时清理</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">kv_cache</span><span class="p">[</span><span class="n">request_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">compute_kv</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">generate</span><span class="p">(</span><span class="n">kv_cache</span><span class="p">[</span><span class="n">request_id</span><span class="p">])</span>
+<span class="k">finally</span><span class="p">:</span>
+    <span class="k">del</span> <span class="n">kv_cache</span><span class="p">[</span><span class="n">request_id</span><span class="p">]</span>  <span class="c1"># 确保清理</span>
+</code></pre></div>
+
+<h3 id="3">3. 服务化陷阱</h3>
+<p><strong>陷阱：忽视冷启动问题</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># ❌ 错误：直接处理第一个请求</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_event</span><span class="p">(</span><span class="s2">&quot;startup&quot;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">startup</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">model</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">()</span>  <span class="c1"># 加载完就结束</span>
+
+<span class="c1"># ✅ 正确：预热模型</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">on_event</span><span class="p">(</span><span class="s2">&quot;startup&quot;</span><span class="p">)</span> 
+<span class="k">async</span> <span class="k">def</span> <span class="nf">startup</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">model</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">()</span>
+    <span class="c1"># 预热：运行几个推理避免首次调用慢</span>
+    <span class="n">warmup_inputs</span> <span class="o">=</span> <span class="n">create_dummy_inputs</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">warmup_inputs</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>陷阱：同步阻塞操作</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># ❌ 错误：同步图像处理阻塞事件循环</span>
+<span class="k">def</span> <span class="nf">process_request</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+    <span class="n">processed_image</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="p">(</span><span class="mi">336</span><span class="p">,</span> <span class="mi">336</span><span class="p">))</span>  <span class="c1"># 阻塞</span>
+    <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">processed_image</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+
+<span class="c1"># ✅ 正确：异步处理</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">process_request</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+    <span class="n">processed_image</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="p">(</span><span class="mi">336</span><span class="p">,</span> <span class="mi">336</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">model</span><span class="o">.</span><span class="n">generate_async</span><span class="p">(</span><span class="n">processed_image</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="4">4. 监控盲区</h3>
+<p><strong>陷阱：只监控平均值</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># ❌ 错误：平均延迟看起来很好</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Avg latency: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">latencies</span><span class="p">)</span><span class="si">}</span><span class="s2">ms&quot;</span><span class="p">)</span>  <span class="c1"># 200ms</span>
+
+<span class="c1"># ✅ 正确：关注分位数</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;P50: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">latencies</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span><span class="si">}</span><span class="s2">ms&quot;</span><span class="p">)</span>  <span class="c1"># 150ms</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;P95: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">latencies</span><span class="p">,</span><span class="w"> </span><span class="mi">95</span><span class="p">)</span><span class="si">}</span><span class="s2">ms&quot;</span><span class="p">)</span>  <span class="c1"># 800ms！</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;P99: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">latencies</span><span class="p">,</span><span class="w"> </span><span class="mi">99</span><span class="p">)</span><span class="si">}</span><span class="s2">ms&quot;</span><span class="p">)</span>  <span class="c1"># 2000ms！！</span>
+</code></pre></div>
+
+<h2 id="_15">最佳实践检查清单</h2>
+<h3 id="_16">部署前检查</h3>
+<p><strong>模型优化</strong></p>
+<ul>
+<li>[ ] 选择合适的量化方案（INT8/4-bit）</li>
+<li>[ ] 验证量化后精度损失 &lt; 阈值</li>
+<li>[ ] 关键层保持高精度</li>
+<li>[ ] 使用代表性数据校准</li>
+</ul>
+<p><strong>推理配置</strong></p>
+<ul>
+<li>[ ] 启用 Flash Attention</li>
+<li>[ ] 配置 PagedAttention</li>
+<li>[ ] 设置合理的批大小上限</li>
+<li>[ ] 实施动态 batching</li>
+</ul>
+<p><strong>服务架构</strong></p>
+<ul>
+<li>[ ] 实现健康检查接口</li>
+<li>[ ] 配置负载均衡</li>
+<li>[ ] 设置请求超时</li>
+<li>[ ] 实现优雅关闭</li>
+</ul>
+<h3 id="_17">部署中监控</h3>
+<p><strong>性能指标</strong></p>
+<ul>
+<li>[ ] TTFT &lt; 目标值</li>
+<li>[ ] TPS 满足需求</li>
+<li>[ ] GPU 利用率 &gt; 80%</li>
+<li>[ ] 内存使用稳定</li>
+</ul>
+<p><strong>质量指标</strong></p>
+<ul>
+<li>[ ] 错误率 &lt; 0.1%</li>
+<li>[ ] 生成质量评分达标</li>
+<li>[ ] 无内容截断问题</li>
+</ul>
+<p><strong>稳定性</strong></p>
+<ul>
+<li>[ ] 无内存泄漏</li>
+<li>[ ] P99 延迟稳定</li>
+<li>[ ] 自动故障恢复工作</li>
+</ul>
+<h3 id="_18">持续优化</h3>
+<p><strong>A/B 测试</strong></p>
+<ul>
+<li>[ ] 新优化先小流量测试</li>
+<li>[ ] 收集足够样本量</li>
+<li>[ ] 多维度指标评估</li>
+<li>[ ] 有回滚预案</li>
+</ul>
+<p><strong>迭代改进</strong></p>
+<ul>
+<li>[ ] 定期 review 慢查询</li>
+<li>[ ] 分析错误日志模式  </li>
+<li>[ ] 收集用户反馈</li>
+<li>[ ] 跟踪新技术进展</li>
+</ul>
+<p><strong>容量规划</strong></p>
+<ul>
+<li>[ ] 预测流量增长</li>
+<li>[ ] 制定扩容计划</li>
+<li>[ ] 优化资源利用率</li>
+<li>[ ] 成本效益分析</li>
+</ul>
+            </article>
+            
+            <nav class="page-nav"><a href="chapter7.html" class="nav-link prev">← 第 7 章：评估体系设计</a><a href="chapter9.html" class="nav-link next">第 9 章：CUDA OOM 调试完全指南 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>

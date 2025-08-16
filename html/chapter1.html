@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>第 1 章：VLM 架构与原理</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/highlight.css">
+    <script src="assets/script.js" defer></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$']],
+                displayMath: [['$$', '$$']],
+                processEscapes: false,
+                packages: {'[+]': ['noerrors', 'ams']}
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            loader: {
+                load: ['[tex]/noerrors', '[tex]/ams']
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <nav id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h3>目录</h3>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <div class="sidebar-search">
+                <input type="text" id="sidebar-search-input" placeholder="搜索..." autocomplete="off">
+            </div>
+            <div id="tree-container">
+                <nav class="tree-nav" role="tree">
+                    <div class="tree-item " >
+                        <a href="index.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">视觉语言模型（VLM）的监督微调与强化学习实战教程</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item active" >
+                        <a href="chapter1.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 1 章：VLM 架构与原理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter2.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 2 章：数据准备与预处理</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter3.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 3 章：SFT 训练策略</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter4.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 4 章：分布式训练与优化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter5.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 5 章：RLHF 基础与实现</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter6.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 6 章：直接偏好优化（DPO）</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter7.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 7 章：评估体系设计</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter8.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 8 章：模型部署与服务化</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter9.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 9 章：CUDA OOM 调试完全指南</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter10.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 10 章：训练崩溃与 NaN 问题</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter11.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 11 章：训练速度优化实战</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="chapter12.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">第 12 章：多机多卡调试地狱</span>
+                        </a>
+                    </div>
+                
+                    <div class="tree-item " >
+                        <a href="CLAUDE.html" class="tree-link">
+                            <span class="tree-icon">📄</span>
+                            <span class="tree-title">Untitled</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </nav>
+        
+        <main class="content">
+            <article>
+                <h1 id="1-vlm">第 1 章：VLM 架构与原理</h1>
+<h2 id="_1">本章导读</h2>
+<p>视觉语言模型（Vision-Language Model, VLM）代表了多模态人工智能的前沿方向。与纯文本的大语言模型不同，VLM 需要同时理解视觉信息和语言信息，并在两种模态之间建立有效的语义桥梁。本章将深入剖析 VLM 的核心架构设计，比较主流技术路线的优劣，并通过实际案例展示架构演进的关键决策点。学习完本章后，您将能够理解不同 VLM 架构的设计权衡，为后续的模型训练和优化打下坚实基础。</p>
+<h2 id="11">1.1 视觉编码器与语言模型的融合策略</h2>
+<h3 id="111">1.1.1 融合架构的三种范式</h3>
+<p>VLM 的核心挑战在于如何将视觉特征有效地融入语言模型的计算流程。当前主流的融合策略可分为三类：</p>
+<p><strong>早期融合（Early Fusion）</strong>：在输入层就将视觉和文本特征拼接，让模型从底层开始学习跨模态交互。这种方式理论上能学到最丰富的跨模态特征，但训练成本极高。</p>
+<div class="codehilite"><pre><span></span><code><span class="nl">输入层</span><span class="p">:</span><span class="w">  </span><span class="p">[</span><span class="n">IMG</span><span class="w"> </span><span class="n">tokens</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">[</span><span class="n">TEXT</span><span class="w"> </span><span class="n">tokens</span><span class="p">]</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Unified</span><span class="w"> </span><span class="n">Transformer</span>
+</code></pre></div>
+
+<p><strong>晚期融合（Late Fusion）</strong>：分别用独立的编码器处理视觉和文本，仅在顶层进行特征融合。这种方式训练效率高，但跨模态交互能力受限。</p>
+<div class="codehilite"><pre><span></span><code><span class="err">视觉分支</span><span class="o">:</span><span class="w"> </span><span class="n">Image</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Vision</span><span class="w"> </span><span class="n">Encoder</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">V_features</span><span class="w"> </span><span class="err">↘</span>
+<span class="w">                                              </span><span class="n">Fusion</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Output</span>
+<span class="err">文本分支</span><span class="o">:</span><span class="w"> </span><span class="n">Text</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Language</span><span class="w"> </span><span class="n">Model</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">T_features</span><span class="w"> </span><span class="err">↗</span>
+</code></pre></div>
+
+<p><strong>中间融合（Cross-Modal Fusion）</strong>：在 Transformer 的中间层注入视觉信息，通过交叉注意力或适配层实现渐进式的模态融合。这是目前最流行的方案，在效率和性能间取得了良好平衡。</p>
+<div class="codehilite"><pre><span></span><code>Layer 1-N:   Text-only processing
+Layer N+1:   Cross-attention to visual features
+Layer N+2-M: Joint processing
+</code></pre></div>
+
+<h3 id="112">1.1.2 视觉编码器的选择</h3>
+<p>视觉编码器负责将原始图像转换为语言模型可理解的特征表示。主流选择包括：</p>
+<p><strong>CLIP 视觉编码器</strong>：经过对比学习预训练，自带良好的视觉-语言对齐能力。大多数开源 VLM（如 LLaVA、MiniGPT-4）采用此方案。其优势在于特征已经具备语义信息，缺点是分辨率受限（通常 224×224 或 336×336）。</p>
+<p><strong>原生 Vision Transformer (ViT)</strong>：未经语言对齐的纯视觉编码器，保留了更原始的视觉信息。InternVL 等模型采用此方案，通过更大的对齐数据集补偿初始对齐的缺失。</p>
+<p><strong>动态分辨率编码器</strong>：如 Pix2Struct、Fuyu 等采用的方案，能够处理任意分辨率的输入。这类编码器通常需要特殊的位置编码设计：</p>
+<p>$$\text{PE}(x, y) = \text{Embed}(\lfloor x/p \rfloor) + \text{Embed}(\lfloor y/p \rfloor)$$
+其中 $p$ 是 patch size，这种设计允许模型泛化到训练时未见过的分辨率。</p>
+<h3 id="113">1.1.3 特征对齐层设计</h3>
+<p>将视觉特征映射到语言模型的嵌入空间是 VLM 设计的关键环节。常见的对齐层设计包括：</p>
+<p><strong>线性投影（Linear Projection）</strong>：最简单直接的方案，通过一个线性变换将视觉特征维度对齐到语言模型：
+$$H_{aligned} = W_{proj} \cdot H_{visual} + b$$
+优点是参数量少、训练稳定，缺点是表达能力有限。</p>
+<p><strong>MLP 投影器（MLP Projector）</strong>：增加非线性变换能力，通常采用两层 MLP：
+$$H_{aligned} = W_2 \cdot \text{GELU}(W_1 \cdot H_{visual} + b_1) + b_2$$
+LLaVA-1.5 采用此方案，在保持效率的同时提升了对齐质量。</p>
+<p><strong>交叉注意力（Cross-Attention）</strong>：通过可学习的查询向量从视觉特征中提取信息：
+$$H_{aligned} = \text{CrossAttention}(Q_{learnable}, K_{visual}, V_{visual})$$
+Flamingo、BLIP-2 采用此方案，表达能力最强但参数量和计算成本较高。</p>
+<p><strong>Perceiver Resampler</strong>：使用固定数量的潜在向量通过交叉注意力采样视觉信息，实现了输入长度和输出长度的解耦：
+$$H_{aligned} = \text{PerceiverBlock}^{N}(Z_{latent}, H_{visual})$$
+其中 $Z_{latent} \in \mathbb{R}^{m \times d}$ 是可学习的潜在向量，$m$ 远小于视觉 token 数量。</p>
+<h2 id="12-vlm">1.2 主流 VLM 架构对比</h2>
+<h3 id="121-clip-based">1.2.1 CLIP-based 架构家族</h3>
+<p><strong>特点</strong>：直接利用 CLIP 的预对齐特性，通过简单的适配层接入语言模型。</p>
+<p><strong>代表模型</strong>：</p>
+<ul>
+<li><strong>LLaVA</strong>：CLIP ViT + MLP Projector + Vicuna/LLaMA</li>
+<li><strong>MiniGPT-4</strong>：CLIP ViT + Linear Projection + Vicuna</li>
+<li><strong>ShareGPT4V</strong>：高分辨率 CLIP + MLP + Vicuna</li>
+</ul>
+<p><strong>架构细节</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="nc">Image</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">CLIP</span><span class="o">-</span><span class="n">ViT</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="o">[</span><span class="n">CLS</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Patch</span><span class="w"> </span><span class="n">Features</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">MLP</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">LLM</span><span class="w"> </span><span class="k">Input</span><span class="w"> </span><span class="nf">Space</span>
+<span class="w">                          </span><span class="err">↓</span>
+<span class="w">                    </span><span class="o">[</span><span class="n">196-576 visual tokens</span><span class="o">]</span>
+</code></pre></div>
+
+<p><strong>优势</strong>：</p>
+<ul>
+<li>训练成本低，仅需对齐层和 LLM 的 LoRA 参数</li>
+<li>收敛快，因为视觉特征已预对齐</li>
+<li>开源友好，易于复现</li>
+</ul>
+<p><strong>劣势</strong>：</p>
+<ul>
+<li>受限于 CLIP 的预训练分辨率</li>
+<li>细粒度视觉理解能力不足</li>
+<li>难以处理视频等时序信息</li>
+</ul>
+<h3 id="122-flamingo">1.2.2 Flamingo 架构</h3>
+<p><strong>特点</strong>：通过 Perceiver Resampler 和交叉注意力实现高效的多模态融合。</p>
+<p><strong>架构创新</strong>：</p>
+<ol>
+<li><strong>Perceiver Resampler</strong>：将任意数量的视觉 token 压缩到固定长度</li>
+<li><strong>Gated Cross-Attention</strong>：在冻结的 LM 层间插入可训练的交叉注意力层</li>
+<li><strong>时序建模</strong>：原生支持视频理解</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>Visual Input → NFNet → Perceiver Resampler → [64 visual tokens]
+                            ↓
+LM Layer N → Gated XAttn → LM Layer N+1
+</code></pre></div>
+
+<p>门控机制的数学表达：
+$$y = x + \tanh(\alpha) \cdot \text{CrossAttn}(x, v)$$
+其中 $\alpha$ 是可学习的门控参数，初始化为 0 以保证训练稳定性。</p>
+<p><strong>优势</strong>：</p>
+<ul>
+<li>支持任意长度的视觉输入</li>
+<li>保持预训练 LM 权重不变</li>
+<li>自然支持 few-shot 学习</li>
+</ul>
+<p><strong>劣势</strong>：</p>
+<ul>
+<li>训练复杂度高</li>
+<li>需要大规模数据集（原论文用了 2.3B 图文对）</li>
+<li>推理时计算开销大</li>
+</ul>
+<h3 id="123-blip">1.2.3 BLIP 系列架构</h3>
+<p><strong>特点</strong>：统一的多模态编码器-解码器架构，支持理解和生成双向任务。</p>
+<p><strong>BLIP-2 的 Q-Former 设计</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="nx">Image</span><span class="w"> </span><span class="nx">Features</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">Q</span><span class="o">-</span><span class="nx">Former</span><span class="w"> </span><span class="p">(</span><span class="nx">BERT</span><span class="o">-</span><span class="nx">based</span><span class="p">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="p">[</span><span class="mi">32</span><span class="w"> </span><span class="nx">queries</span><span class="p">]</span>
+<span class="w">                      </span><span class="err">↓</span>
+<span class="w">              </span><span class="nx">Bi</span><span class="o">-</span><span class="nx">directional</span><span class="w"> </span><span class="k">Self</span><span class="o">-</span><span class="nx">Attn</span>
+<span class="w">                      </span><span class="o">+</span>
+<span class="w">              </span><span class="nx">Cross</span><span class="o">-</span><span class="nx">Attn</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">Image</span>
+<span class="w">                      </span><span class="err">↓</span>
+<span class="w">                 </span><span class="nx">Pooled</span><span class="w"> </span><span class="nx">Features</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">LLM</span>
+</code></pre></div>
+
+<p>Q-Former 的训练包含三个目标：</p>
+<ol>
+<li><strong>Image-Text Contrastive (ITC)</strong>：对齐全局特征</li>
+<li><strong>Image-Text Matching (ITM)</strong>：细粒度匹配</li>
+<li><strong>Image-grounded Text Generation (ITG)</strong>：生成能力</li>
+</ol>
+<p>损失函数：
+$$\mathcal{L} = \lambda_1 \mathcal{L}_{ITC} + \lambda_2 \mathcal{L}_{ITM} + \lambda_3 \mathcal{L}_{ITG}$$
+<strong>优势</strong>：</p>
+<ul>
+<li>查询向量数量固定，计算效率高</li>
+<li>多任务预训练，泛化能力强</li>
+<li>模块化设计，可接入不同的 LLM</li>
+</ul>
+<p><strong>劣势</strong>：</p>
+<ul>
+<li>Q-Former 需要额外的预训练阶段</li>
+<li>固定查询数量可能丢失细节信息</li>
+<li>对高分辨率图像支持不佳</li>
+</ul>
+<h3 id="124">1.2.4 架构性能对比</h3>
+<p>| 架构 | 视觉Token数 | 参数量 | 训练数据 | MMBench | 推理速度 |</p>
+<table>
+<thead>
+<tr>
+<th>架构</th>
+<th>视觉Token数</th>
+<th>参数量</th>
+<th>训练数据</th>
+<th>MMBench</th>
+<th>推理速度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLaVA-1.5</td>
+<td>576</td>
+<td>13B</td>
+<td>1.2M</td>
+<td>67.5</td>
+<td>快</td>
+</tr>
+<tr>
+<td>Flamingo</td>
+<td>64</td>
+<td>80B</td>
+<td>2.3B</td>
+<td>65.7</td>
+<td>慢</td>
+</tr>
+<tr>
+<td>BLIP-2</td>
+<td>32</td>
+<td>12B</td>
+<td>129M</td>
+<td>69.3</td>
+<td>中</td>
+</tr>
+<tr>
+<td>InternVL</td>
+<td>256</td>
+<td>26B</td>
+<td>500M</td>
+<td>72.1</td>
+<td>中</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13">1.3 多模态对齐的关键技术</h2>
+<h3 id="131">1.3.1 位置编码策略</h3>
+<p>VLM 需要同时处理二维的图像布局和一维的文本序列，位置编码的设计至关重要。</p>
+<p><strong>绝对位置编码</strong>：</p>
+<ul>
+<li>文本：标准的可学习位置嵌入</li>
+<li>图像：2D 正弦编码或可学习的 2D 嵌入</li>
+</ul>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 2D 正弦位置编码示例</span>
+<span class="k">def</span> <span class="nf">get_2d_sincos_pos_embed</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">,</span> <span class="n">grid_h</span><span class="p">,</span> <span class="n">grid_w</span><span class="p">):</span>
+    <span class="n">grid_h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">grid_h</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">grid_w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">grid_w</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">grid_w</span><span class="p">,</span> <span class="n">grid_h</span><span class="p">)</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">pos_embed</span> <span class="o">=</span> <span class="n">get_2d_sincos_pos_embed_from_grid</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">,</span> <span class="n">grid</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pos_embed</span>
+</code></pre></div>
+
+<p><strong>相对位置编码</strong>：</p>
+<ul>
+<li>使用相对位置偏置，更好地泛化到不同分辨率</li>
+<li>分解为行偏置和列偏置：$B_{ij} = B^{row}_{i} + B^{col}_{j}$</li>
+</ul>
+<p><strong>RoPE (Rotary Position Embedding)</strong>：</p>
+<ul>
+<li>许多现代 LLM 使用 RoPE</li>
+<li>需要将 2D 位置映射到 1D：
+$$\text{pos}_{1d} = y \times W + x$$
+其中 $(x, y)$ 是 2D 坐标，$W$ 是图像宽度。</li>
+</ul>
+<h3 id="132">1.3.2 注意力机制优化</h3>
+<p><strong>因果注意力掩码设计</strong>：</p>
+<p>VLM 中的注意力掩码需要考虑三种交互：</p>
+<ol>
+<li>文本到文本：因果掩码（causal mask）</li>
+<li>文本到图像：全连接（full attention）</li>
+<li>图像到图像：全连接或局部注意力</li>
+</ol>
+<p>掩码矩阵结构：</p>
+<div class="codehilite"><pre><span></span><code><span class="w">        </span><span class="o">[</span><span class="n">IMG</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">TXT</span><span class="o">]</span>
+<span class="o">[</span><span class="n">IMG</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">  1    0  </span><span class="o">]</span>
+<span class="o">[</span><span class="n">TXT</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">  1   Causal</span><span class="o">]</span>
+</code></pre></div>
+
+<p><strong>注意力计算优化</strong>：</p>
+<p>对于高分辨率图像，注意力计算的复杂度为 $O(N^2)$，其中 $N$ 是 token 数。常用优化技术：</p>
+<ol>
+<li><strong>Flash Attention</strong>：通过分块计算和 IO 优化，将内存占用从 $O(N^2)$ 降到 $O(N)$</li>
+<li><strong>Sliding Window Attention</strong>：限制注意力范围在局部窗口</li>
+<li><strong>Sparse Attention</strong>：只计算部分位置的注意力</li>
+</ol>
+<h3 id="133">1.3.3 训练策略与损失设计</h3>
+<p><strong>多阶段训练策略</strong>：</p>
+<p>大多数 VLM 采用多阶段训练以平衡效率和性能：</p>
+<ol>
+<li>
+<p><strong>预对齐阶段</strong>：冻结视觉编码器和 LLM，只训练对齐层
+   - 数据：大规模弱标注的图文对（如 CC3M、LAION）
+   - 目标：学习基本的模态对齐</p>
+</li>
+<li>
+<p><strong>指令微调阶段</strong>：解冻部分或全部参数
+   - 数据：高质量的指令跟随数据
+   - 目标：提升指令理解和复杂推理能力</p>
+</li>
+<li>
+<p><strong>强化学习阶段</strong>（可选）：通过 RLHF 或 DPO 优化
+   - 数据：人类偏好数据
+   - 目标：对齐人类价值观，减少幻觉</p>
+</li>
+</ol>
+<p><strong>损失函数设计</strong>：</p>
+<p>基础的自回归损失：
+$$\mathcal{L}_{LM} = -\sum_{t=1}^{T} \log P(x_t | x_{&lt;t}, I)$$
+其中 $I$ 表示图像输入，$x_t$ 是第 $t$ 个文本 token。</p>
+<p><strong>注意力正则化</strong>：
+为了改善跨模态注意力分布，可以添加正则项：
+$$\mathcal{L}_{attn} = \lambda \cdot \text{KL}(A_{cross} || U)$$
+其中 $A_{cross}$ 是跨模态注意力分布，$U$ 是均匀分布。</p>
+<h2 id="14-case-study-llava-15-llava-next">1.4 Case Study: 从 LLaVA-1.5 到 LLaVA-NeXT 的架构演进</h2>
+<h3 id="141-llava-15">1.4.1 LLaVA-1.5 的基础架构</h3>
+<p>LLaVA-1.5 确立了简单高效的 VLM 基准架构：</p>
+<p><strong>核心组件</strong>：</p>
+<ul>
+<li>视觉编码器：CLIP ViT-L/14（336×336）</li>
+<li>对齐层：两层 MLP with GELU</li>
+<li>语言模型：Vicuna-13B</li>
+</ul>
+<p><strong>关键设计决策</strong>：</p>
+<ol>
+<li>
+<p><strong>视觉 Token 处理</strong>：
+   - 移除 CLIP 的最后一层，使用倒数第二层特征
+   - 保留所有 patch token（24×24=576），不使用 [CLS] token
+   - 原因：patch token 包含更丰富的局部信息</p>
+</li>
+<li>
+<p><strong>训练策略</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code>Stage 1: 预训练对齐层（558K 图文对，1 epoch）
+Stage 2: 指令微调（665K 多模态指令，1 epoch）
+</code></pre></div>
+
+<ol start="3">
+<li><strong>数据混合比例</strong>：
+   - Academic VQA: 50%
+   - OCR &amp; Chart: 20%
+   - General Conversation: 30%</li>
+</ol>
+<p><strong>性能突破点</strong>：</p>
+<ul>
+<li>简单架构达到 SOTA：在 12 个基准上超越复杂模型</li>
+<li>训练效率极高：仅需 8×A100 训练 15 小时</li>
+<li>关键 insight：高质量数据 &gt; 复杂架构</li>
+</ul>
+<h3 id="142-llava-next">1.4.2 LLaVA-NeXT 的渐进式改进</h3>
+<p>LLaVA-NeXT（LLaVA-1.6）在保持架构简洁性的同时引入关键优化：</p>
+<p><strong>AnyRes 技术</strong>：动态分辨率支持</p>
+<p>原理：将高分辨率图像分割成多个 patch，每个 patch 独立编码：</p>
+<div class="codehilite"><pre><span></span><code>原图 (672×1008) → Grid Split → 4 个 (336×336) patches
+                      ↓
+              每个 patch → CLIP → 576 tokens
+                      ↓
+              Concat: 4×576 = 2304 visual tokens
+</code></pre></div>
+
+<p>分割策略的数学表达：
+$$N_{patches} = \lceil \frac{H}{336} \rceil \times \lceil \frac{W}{336} \rceil$$
+<strong>改进效果</strong>：</p>
+<ul>
+<li>支持最高 672×4032 分辨率</li>
+<li>OCR 和文档理解能力显著提升</li>
+<li>视觉 token 数量自适应（576-4032）</li>
+</ul>
+<h3 id="143">1.4.3 架构演进的关键洞察</h3>
+<p><strong>数据质量 vs 模型复杂度</strong>：</p>
+<p>LLaVA 系列的成功证明了一个反直觉的事实：在数据质量足够高的前提下，简单的架构往往优于复杂设计。</p>
+<p>关键数据改进：</p>
+<ol>
+<li><strong>指令多样性</strong>：从简单 VQA 扩展到复杂推理</li>
+<li><strong>回答质量</strong>：使用 GPT-4V 生成高质量标注</li>
+<li><strong>任务覆盖</strong>：包含识别、推理、创作等多种任务</li>
+</ol>
+<p><strong>分辨率与性能的权衡</strong>：</p>
+<div class="codehilite"><pre><span></span><code>分辨率  | 视觉Tokens | TextVQA | ChartQA | 训练时间
+--------|-----------|---------|---------|----------
+336×336 | 576       | 58.2    | 62.3    | 1x
+672×672 | 2304      | 64.1    | 69.5    | 3.5x
+动态    | 576-4032  | 65.7    | 71.2    | 2.8x
+</code></pre></div>
+
+<p><strong>架构简化的工程优势</strong>：</p>
+<ol>
+<li><strong>易于调试</strong>：组件少，问题定位快</li>
+<li><strong>训练稳定</strong>：没有复杂的多阶段训练</li>
+<li><strong>部署友好</strong>：推理优化简单</li>
+<li><strong>社区贡献</strong>：低门槛促进开源生态</li>
+</ol>
+<h3 id="144">1.4.4 失败的尝试与教训</h3>
+<p>LLaVA 团队也尝试过一些最终被放弃的设计：</p>
+<ol>
+<li>
+<p><strong>Vision Token Compression</strong>：
+   - 尝试：使用可学习的 pooling 减少 token 数
+   - 结果：细粒度任务性能下降 5-8%
+   - 教训：压缩必须保留足够的空间分辨率</p>
+</li>
+<li>
+<p><strong>Interleaved Attention</strong>：
+   - 尝试：图像和文本 token 交错排列
+   - 结果：训练不稳定，收敛慢
+   - 教训：模态分离有助于训练稳定性</p>
+</li>
+<li>
+<p><strong>Hierarchical Encoding</strong>：
+   - 尝试：多尺度特征金字塔
+   - 结果：收益微小但计算成本翻倍
+   - 教训：单一尺度 + 高分辨率更实用</p>
+</li>
+</ol>
+<h2 id="15">1.5 高级话题</h2>
+<h3 id="151">1.5.1 动态分辨率处理技术</h3>
+<p><strong>Pix2Struct 的可变分辨率方案</strong>：</p>
+<p>核心思想：将图像表示为可变长度的 patch 序列，通过特殊的位置编码处理不同宽高比。</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">variable_resolution_encode</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">max_patches</span><span class="p">):</span>
+    <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+    <span class="c1"># 动态确定 patch 网格</span>
+    <span class="n">aspect_ratio</span> <span class="o">=</span> <span class="n">w</span> <span class="o">/</span> <span class="n">h</span>
+    <span class="k">if</span> <span class="n">aspect_ratio</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">grid_w</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">max_patches</span> <span class="o">*</span> <span class="n">aspect_ratio</span><span class="p">))</span>
+        <span class="n">grid_h</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_patches</span> <span class="o">/</span> <span class="n">grid_w</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">grid_h</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">max_patches</span> <span class="o">/</span> <span class="n">aspect_ratio</span><span class="p">))</span>
+        <span class="n">grid_w</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">max_patches</span> <span class="o">/</span> <span class="n">grid_h</span><span class="p">)</span>
+
+    <span class="c1"># 自适应 patch size</span>
+    <span class="n">patch_h</span> <span class="o">=</span> <span class="n">h</span> <span class="o">/</span> <span class="n">grid_h</span>
+    <span class="n">patch_w</span> <span class="o">=</span> <span class="n">w</span> <span class="o">/</span> <span class="n">grid_w</span>
+    <span class="k">return</span> <span class="n">extract_patches</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">patch_h</span><span class="p">,</span> <span class="n">patch_w</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>NaViT 的 Patch Packing</strong>：</p>
+<p>将多个图像的 patch 打包到同一个 batch，实现真正的动态分辨率训练：</p>
+<div class="codehilite"><pre><span></span><code>Batch = [img1_patches | img2_patches | ... | padding]
+Mask  = [1,1,1,1,1,1  | 1,1,1,1      | ... | 0,0,0  ]
+</code></pre></div>
+
+<p>优势：</p>
+<ul>
+<li>无需 resize，保留原始信息</li>
+<li>Batch 利用率高，训练效率提升 30%</li>
+<li>支持极端宽高比（如 1:10 的长文档）</li>
+</ul>
+<h3 id="152-cross-attention-vs-mlp-projector">1.5.2 Cross-attention vs MLP Projector 性能对比</h3>
+<p><strong>理论分析</strong>：</p>
+<p>Cross-attention 的表达能力：
+$$Y = \text{softmax}(\frac{QK^T}{\sqrt{d}})V$$
+可以实现动态的特征选择和聚合，理论表达能力为 $O(n^2d)$。</p>
+<p>MLP Projector 的表达能力：
+$$Y = W_2 \sigma(W_1 X + b_1) + b_2$$
+是固定的非线性变换，表达能力为 $O(d^2)$。</p>
+<p><strong>实证对比</strong>：</p>
+<p>| 方法 | 参数量 | FLOPs | VQAv2 | TextVQA | 训练时间 |</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>参数量</th>
+<th>FLOPs</th>
+<th>VQAv2</th>
+<th>TextVQA</th>
+<th>训练时间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linear</td>
+<td>4M</td>
+<td>0.02G</td>
+<td>75.3</td>
+<td>51.2</td>
+<td>1.0x</td>
+</tr>
+<tr>
+<td>MLP-2L</td>
+<td>23M</td>
+<td>0.13G</td>
+<td>78.5</td>
+<td>57.6</td>
+<td>1.1x</td>
+</tr>
+<tr>
+<td>CrossAttn-4L</td>
+<td>86M</td>
+<td>2.4G</td>
+<td>79.7</td>
+<td>58.9</td>
+<td>2.3x</td>
+</tr>
+<tr>
+<td>Perceiver</td>
+<td>108M</td>
+<td>3.1G</td>
+<td>80.2</td>
+<td>59.1</td>
+<td>2.8x</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实践建议</strong>：</p>
+<ol>
+<li><strong>资源受限场景</strong>：使用 MLP Projector</li>
+<li><strong>精度优先场景</strong>：使用 Cross-attention</li>
+<li><strong>折中方案</strong>：MLP + 轻量级 Cross-attention</li>
+</ol>
+<h3 id="153">1.5.3 视觉编码器的持续学习</h3>
+<p><strong>渐进式解冻策略</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">get_unfreeze_schedule</span><span class="p">(</span><span class="n">total_steps</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;渐进式解冻视觉编码器&quot;&quot;&quot;</span>
+    <span class="n">schedule</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="p">[],</span>  <span class="c1"># 初始全部冻结</span>
+        <span class="n">total_steps</span> <span class="o">*</span> <span class="mf">0.3</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;layer.23&#39;</span><span class="p">],</span>  <span class="c1"># 30% 解冻最后一层</span>
+        <span class="n">total_steps</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;layer.22&#39;</span><span class="p">,</span> <span class="s1">&#39;layer.23&#39;</span><span class="p">],</span>  <span class="c1"># 50% 解冻后两层</span>
+        <span class="n">total_steps</span> <span class="o">*</span> <span class="mf">0.7</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;layer.20&#39;</span><span class="p">,</span> <span class="s1">&#39;layer.21&#39;</span><span class="p">,</span> <span class="s1">&#39;layer.22&#39;</span><span class="p">,</span> <span class="s1">&#39;layer.23&#39;</span><span class="p">],</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">schedule</span>
+</code></pre></div>
+
+<p><strong>Layer-wise Learning Rate</strong>：</p>
+<p>不同层使用不同学习率，底层小、顶层大：
+$$lr_i = lr_{base} \times decay^{(L-i)}$$
+其中 $i$ 是层索引，$L$ 是总层数，典型的 $decay = 0.9$。</p>
+<p><strong>知识蒸馏保护</strong>：</p>
+<p>在微调时加入蒸馏损失，防止灾难性遗忘：
+$$\mathcal{L} = \mathcal{L}_{task} + \lambda \cdot \text{KL}(f_{\theta}(x) || f_{\theta_0}(x))$$</p>
+<p>其中 $f_{\theta_0}$ 是原始 CLIP 编码器。</p>
+<h2 id="_2">本章小结</h2>
+<p>本章系统介绍了 VLM 的核心架构设计和关键技术。我们学习了：</p>
+<ol>
+<li><strong>融合策略</strong>：早期融合、晚期融合和中间融合各有优劣，当前主流采用中间融合以平衡性能和效率</li>
+<li><strong>视觉编码器选择</strong>：CLIP 预对齐的优势明显，但原生 ViT 和动态分辨率编码器在特定场景更优</li>
+<li><strong>对齐层设计</strong>：从简单的线性投影到复杂的交叉注意力，需要根据任务需求和资源约束选择</li>
+<li><strong>架构对比</strong>：LLaVA 的简洁高效、Flamingo 的灵活强大、BLIP 的模块化设计各有特色</li>
+<li><strong>演进洞察</strong>：LLaVA 的成功证明了数据质量的重要性往往超过架构复杂度</li>
+<li><strong>高级技术</strong>：动态分辨率、渐进式训练、知识蒸馏等技术进一步提升了 VLM 的能力边界</li>
+</ol>
+<p><strong>核心公式回顾</strong>：</p>
+<ul>
+<li>2D 位置编码：$\text{pos}_{1d} = y \times W + x$</li>
+<li>自回归损失：$\mathcal{L}_{LM} = -\sum_{t=1}^{T} \log P(x_t | x_{&lt;t}, I)$</li>
+<li>门控机制：$y = x + \tanh(\alpha) \cdot \text{CrossAttn}(x, v)$</li>
+<li>Layer-wise LR：$lr_i = lr_{base} \times decay^{(L-i)}$</li>
+</ul>
+<h2 id="_3">练习题</h2>
+<h3 id="_4">基础题</h3>
+<p><strong>练习 1.1：融合策略理解</strong>
+比较早期融合和晚期融合在处理一张 1024×1024 图像时的计算复杂度。假设使用 ViT-L（patch size=16）作为视觉编码器，文本长度为 256 tokens。</p>
+<p>💡 提示：考虑自注意力的计算复杂度 $O(n^2d)$</p>
+<details markdown="1">
+<summary>参考答案</summary>
+
+<p>早期融合：</p>
+<ul>
+<li>图像 patches: (1024/16)² = 4096</li>
+<li>总 tokens: 4096 + 256 = 4352</li>
+<li>注意力复杂度: O(4352² × d) ≈ O(18.9M × d)</li>
+</ul>
+<p>晚期融合：</p>
+<ul>
+<li>视觉分支: O(4096² × d) ≈ O(16.8M × d)</li>
+<li>文本分支: O(256² × d) ≈ O(65K × d)</li>
+<li>总复杂度: O(16.8M × d)</li>
+</ul>
+<p>早期融合的计算成本略高，但能够实现更充分的跨模态交互。
+</details></p>
+<p><strong>练习 1.2：视觉 Token 计算</strong>
+LLaVA-NeXT 使用 AnyRes 处理一张 1344×896 的图像，计算需要多少视觉 tokens？（基础分辨率 336×336）</p>
+<p>💡 提示：使用公式 $N_{patches} = \lceil \frac{H}{336} \rceil \times \lceil \frac{W}{336} \rceil$</p>
+<details>
+<summary>参考答案</summary>
+<ul>
+<li>高度方向: ⌈896/336⌉ = ⌈2.67⌉ = 3</li>
+<li>宽度方向: ⌈1344/336⌉ = ⌈4⌉ = 4</li>
+<li>总 patches: 3 × 4 = 12</li>
+<li>每个 patch 产生 576 tokens (24×24)</li>
+<li>总 tokens: 12 × 576 = 6912</li>
+</ul>
+<p>这比固定 336×336 分辨率（576 tokens）多了 12 倍，能够保留更多细节信息。</p>
+</details>
+<p><strong>练习 1.3：参数量估算</strong>
+估算一个使用 CLIP ViT-L/14 + 2层MLP + Vicuna-7B 的 VLM 模型的总参数量。已知：</p>
+<ul>
+<li>CLIP ViT-L/14: 304M 参数</li>
+<li>Vicuna-7B: 7B 参数</li>
+<li>MLP hidden dim: 4096, CLIP output: 1024, LLM input: 4096</li>
+</ul>
+<p>💡 提示：2层 MLP 的参数量 = (input_dim × hidden_dim + hidden_dim) + (hidden_dim × output_dim + output_dim)</p>
+<details>
+<summary>参考答案</summary>
+<p>MLP 参数量计算：</p>
+<ul>
+<li>第一层: 1024 × 4096 + 4096 = 4,198,400</li>
+<li>第二层: 4096 × 4096 + 4096 = 16,781,312</li>
+<li>MLP 总计: ≈ 21M</li>
+</ul>
+<p>总参数量：</p>
+<ul>
+<li>CLIP: 304M</li>
+<li>MLP: 21M</li>
+<li>Vicuna: 7000M</li>
+<li>总计: ≈ 7.3B</li>
+</ul>
+<p>如果冻结 CLIP，可训练参数仅 7.02B。</p>
+</details>
+<h3 id="_5">挑战题</h3>
+<p><strong>练习 1.4：注意力掩码设计</strong>
+设计一个注意力掩码矩阵，支持以下交互模式：</p>
+<ul>
+<li>图像 tokens 之间：只能关注空间相邻的 patches（3×3 窗口）</li>
+<li>文本到图像：前 50% 的文本 tokens 不能看到图像</li>
+<li>图像到文本：图像不能看到未来的文本</li>
+</ul>
+<p>💡 提示：考虑如何用 0/1 矩阵表示不同的注意力模式</p>
+<details>
+<summary>参考答案</summary>
+<p>假设图像有 9 个 patches (3×3)，文本有 100 tokens：</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span> <span class="nf">create_custom_mask</span><span class="p">(</span><span class="n">img_h</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">img_w</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">text_len</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">img_tokens</span> <span class="o">=</span> <span class="n">img_h</span> <span class="o">*</span> <span class="n">img_w</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">img_tokens</span> <span class="o">+</span> <span class="n">text_len</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+
+    <span class="c1"># 图像内部：3×3 窗口注意力</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">img_h</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">img_w</span><span class="p">):</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="n">img_w</span> <span class="o">+</span> <span class="n">j</span>
+            <span class="k">for</span> <span class="n">di</span> <span class="ow">in</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
+                <span class="k">for</span> <span class="n">dj</span> <span class="ow">in</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">ni</span><span class="p">,</span> <span class="n">nj</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="n">di</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="n">dj</span>
+                    <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">ni</span> <span class="o">&lt;</span> <span class="n">img_h</span> <span class="ow">and</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">nj</span> <span class="o">&lt;</span> <span class="n">img_w</span><span class="p">:</span>
+                        <span class="n">nidx</span> <span class="o">=</span> <span class="n">ni</span> <span class="o">*</span> <span class="n">img_w</span> <span class="o">+</span> <span class="n">nj</span>
+                        <span class="n">mask</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">nidx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># 文本到图像：后 50% 可见</span>
+    <span class="n">text_start</span> <span class="o">=</span> <span class="n">img_tokens</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">text_len</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">t</span> <span class="o">&gt;=</span> <span class="n">text_len</span> <span class="o">//</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">mask</span><span class="p">[</span><span class="n">text_start</span> <span class="o">+</span> <span class="n">t</span><span class="p">,</span> <span class="p">:</span><span class="n">img_tokens</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># 文本内部：因果掩码</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">text_len</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">mask</span><span class="p">[</span><span class="n">text_start</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> <span class="n">text_start</span> <span class="o">+</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># 图像到文本：不能看未来</span>
+    <span class="c1"># (已经通过因果掩码实现)</span>
+
+    <span class="k">return</span> <span class="n">mask</span>
+</code></pre></div>
+
+<p>这种设计减少了图像的计算量，同时保持了必要的跨模态交互。</p>
+</details>
+<p><strong>练习 1.5：训练策略优化</strong>
+你有一个 4×A100 (40GB) 的训练环境，需要训练一个基于 LLaMA-13B 的 VLM。设计一个内存高效的训练策略，包括：</p>
+<ol>
+<li>选择合适的精度和优化器</li>
+<li>确定批量大小和梯度累积</li>
+<li>决定哪些组件需要冻结</li>
+</ol>
+<p>💡 提示：考虑模型大小、梯度、优化器状态的内存占用</p>
+<details>
+<summary>参考答案</summary>
+<p>内存分析（FP16 训练）：</p>
+<ul>
+<li>LLaMA-13B: 26GB (FP16)</li>
+<li>CLIP ViT-L: 0.6GB</li>
+<li>梯度: 26.6GB</li>
+<li>Adam 状态: 53.2GB</li>
+<li>总计: ≈106GB</li>
+</ul>
+<p>策略设计：</p>
+<ol>
+<li>
+<p><strong>使用 LoRA + QLoRA</strong>：
+   - 4-bit 量化 LLaMA: 6.5GB
+   - LoRA rank=64: 额外 0.4GB
+   - 大幅减少优化器状态</p>
+</li>
+<li>
+<p><strong>梯度累积</strong>：
+   - Micro batch size: 1 per GPU
+   - Accumulation steps: 8
+   - Effective batch size: 32</p>
+</li>
+<li>
+<p><strong>组件冻结</strong>：
+   - Stage 1: 冻结 CLIP 和 LLaMA，只训练 projector (1 epoch)
+   - Stage 2: 冻结 CLIP，LoRA 微调 LLaMA (2 epochs)
+   - Stage 3: 解冻 CLIP 最后 2 层 (optional, 0.5 epoch)</p>
+</li>
+<li>
+<p><strong>其他优化</strong>：
+   - Gradient checkpointing: 节省 30% 激活内存
+   - Flash Attention: 减少注意力内存
+   - Mixed precision: FP16 计算，FP32 累积</p>
+</li>
+</ol>
+<p>这样每张卡只需要约 35GB 内存，留有安全余量。</p>
+</details>
+<p><strong>练习 1.6：架构创新设计</strong>
+设计一个新的 VLM 架构，要求：</p>
+<ol>
+<li>支持视频输入（可变帧数）</li>
+<li>计算效率优于 Flamingo</li>
+<li>保持与图像任务的兼容性</li>
+</ol>
+<p>描述你的设计思路、关键组件和预期优势。</p>
+<p>💡 提示：考虑时序建模、帧采样策略、参数共享</p>
+<details>
+<summary>参考答案</summary>
+<p><strong>架构设计：Temporal-Aware VLM (TA-VLM)</strong></p>
+<p>核心组件：</p>
+<ol>
+<li>
+<p><strong>共享视觉编码器</strong>：
+   - 使用相同的 CLIP ViT 处理图像和视频帧
+   - 参数共享，无需额外视频编码器</p>
+</li>
+<li>
+<p><strong>时序位置编码</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">pos_embed</span> <span class="o">=</span> <span class="n">spatial_pos</span> <span class="o">+</span> <span class="n">temporal_pos</span> <span class="o">*</span> <span class="n">is_video</span>
+<span class="n">temporal_pos</span> <span class="o">=</span> <span class="n">sinusoidal_encoding</span><span class="p">(</span><span class="n">frame_idx</span> <span class="o">/</span> <span class="n">total_frames</span><span class="p">)</span>
+</code></pre></div>
+
+<ol start="3">
+<li>
+<p><strong>层次化时序聚合</strong>：
+   - Frame-level: 轻量级 1D Conv (kernel=3)
+   - Clip-level: Temporal pooling
+   - Video-level: Learnable [VIDEO] token</p>
+</li>
+<li>
+<p><strong>动态帧采样</strong>：</p>
+</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="k">if</span> <span class="n">video_length</span> <span class="o">&lt;</span> <span class="mi">8</span><span class="p">:</span>
+    <span class="n">sample_all_frames</span><span class="p">()</span>
+<span class="k">elif</span> <span class="n">video_length</span> <span class="o">&lt;</span> <span class="mi">32</span><span class="p">:</span>
+    <span class="n">uniform_sample</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">importance_sample</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>  <span class="c1"># 基于运动强度</span>
+</code></pre></div>
+
+<ol start="5">
+<li><strong>双流注意力</strong>：
+   - Spatial stream: 帧内注意力
+   - Temporal stream: 帧间注意力（稀疏）
+   - 通过门控融合</li>
+</ol>
+<p>优势分析：</p>
+<ul>
+<li>计算效率：O(N×T) vs Flamingo 的 O(N×T²)</li>
+<li>内存效率：渐进式处理，无需加载全部帧</li>
+<li>灵活性：图像就是单帧视频，完全兼容</li>
+<li>扩展性：可处理任意长度视频</li>
+</ul>
+<p>关键创新：</p>
+<ul>
+<li>重要性采样减少冗余帧</li>
+<li>层次化聚合保留多尺度时序信息</li>
+<li>参数共享降低模型复杂度</li>
+</ul>
+</details>
+<p><strong>练习 1.7：性能瓶颈分析</strong>
+分析以下 VLM 训练日志，识别性能瓶颈并提出优化方案：</p>
+<div class="codehilite"><pre><span></span><code>Step 100: Loss=2.34, LR=1e-4, GPU Util=65%, Memory=38/40GB
+Step 200: Loss=2.31, LR=1e-4, GPU Util=68%, Memory=38/40GB
+Step 300: Loss=NaN, LR=1e-4, GPU Util=70%, Memory=38/40GB
+DataLoader: 3.2s/batch, Forward: 0.8s, Backward: 1.5s
+</code></pre></div>
+
+<p>💡 提示：注意 GPU 利用率、Loss 变化、时间分布</p>
+<details>
+<summary>参考答案</summary>
+<p>问题识别：</p>
+<ol>
+<li>
+<p><strong>Loss 爆炸 (Step 300: NaN)</strong>
+   - 学习率过高或梯度爆炸
+   - 可能存在数据异常</p>
+</li>
+<li>
+<p><strong>GPU 利用率低 (65-70%)</strong>
+   - 数据加载瓶颈 (3.2s &gt;&gt; 0.8s + 1.5s)
+   - CPU 成为瓶颈</p>
+</li>
+<li>
+<p><strong>内存未充分利用 (38/40GB)</strong>
+   - 可以增加 batch size</p>
+</li>
+</ol>
+<p>优化方案：</p>
+<ol>
+<li><strong>修复 NaN 问题</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 添加梯度裁剪</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">clip_grad_norm_</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">max_norm</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+<span class="c1"># 降低学习率</span>
+<span class="n">lr</span> <span class="o">=</span> <span class="mf">5e-5</span>  <span class="c1"># 从 1e-4 降低</span>
+
+<span class="c1"># 添加异常检测</span>
+<span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">loss</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;NaN detected at step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># 跳过这个 batch</span>
+    <span class="k">continue</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>优化数据加载</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 增加 workers</span>
+<span class="n">num_workers</span><span class="o">=</span><span class="mi">8</span>  <span class="c1"># 从默认的 2 或 4 增加</span>
+
+<span class="c1"># 使用预取</span>
+<span class="n">prefetch_factor</span><span class="o">=</span><span class="mi">2</span>
+
+<span class="c1"># 图像预处理缓存</span>
+<span class="n">use_cached_features</span><span class="o">=</span><span class="kc">True</span>
+</code></pre></div>
+
+<ol start="3">
+<li><strong>提高 GPU 利用率</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 增加 batch size</span>
+<span class="n">batch_size</span><span class="o">=</span><span class="mi">2</span>  <span class="c1"># 利用剩余 2GB</span>
+
+<span class="c1"># 使用 pin memory</span>
+<span class="n">pin_memory</span><span class="o">=</span><span class="kc">True</span>
+
+<span class="c1"># 异步数据传输</span>
+<span class="n">non_blocking</span><span class="o">=</span><span class="kc">True</span>
+</code></pre></div>
+
+<ol start="4">
+<li><strong>整体优化</strong>：
+   - 使用 torch.compile() 加速
+   - 开启 cudnn.benchmark
+   - 考虑 mixed precision training</li>
+</ol>
+<p>预期效果：</p>
+<ul>
+<li>GPU 利用率提升到 85-90%</li>
+<li>训练速度提升 50%</li>
+<li>避免 NaN 问题</li>
+</ul>
+</details>
+<p><strong>练习 1.8：调试策略设计</strong>
+你的 VLM 在 TextVQA 上表现很差（准确率仅 30%），但在 VQAv2 上表现正常（准确率 75%）。设计一个系统的调试方案来定位和解决问题。</p>
+<p>💡 提示：TextVQA 需要 OCR 能力，考虑分辨率、数据、架构等因素</p>
+<details>
+<summary>参考答案</summary>
+<p><strong>系统调试方案</strong>：</p>
+<ol>
+<li><strong>问题定位</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 分析错误类型</span>
+<span class="n">errors</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;text_not_detected&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>  <span class="c1"># 完全没识别到文字</span>
+    <span class="s1">&#39;text_partial&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>        <span class="c1"># 部分识别</span>
+    <span class="s1">&#39;text_wrong&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>          <span class="c1"># 识别错误</span>
+    <span class="s1">&#39;reasoning_error&#39;</span><span class="p">:</span> <span class="mi">0</span>      <span class="c1"># 识别对但推理错</span>
+<span class="p">}</span>
+
+<span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">test_set</span><span class="p">:</span>
+    <span class="n">pred</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+    <span class="n">error_type</span> <span class="o">=</span> <span class="n">classify_error</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">sample</span><span class="o">.</span><span class="n">answer</span><span class="p">)</span>
+    <span class="n">errors</span><span class="p">[</span><span class="n">error_type</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+</code></pre></div>
+
+<ol start="2">
+<li><strong>分辨率检查</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 测试不同分辨率</span>
+<span class="n">resolutions</span> <span class="o">=</span> <span class="p">[</span><span class="mi">224</span><span class="p">,</span> <span class="mi">336</span><span class="p">,</span> <span class="mi">448</span><span class="p">,</span> <span class="mi">672</span><span class="p">,</span> <span class="mi">896</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">resolutions</span><span class="p">:</span>
+    <span class="n">acc</span> <span class="o">=</span> <span class="n">evaluate_with_resolution</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">test_set</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Resolution </span><span class="si">{</span><span class="n">res</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">acc</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<ol start="3">
+<li><strong>数据分析</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 检查训练数据中 OCR 样本比例</span>
+<span class="n">ocr_ratio</span> <span class="o">=</span> <span class="n">count_ocr_samples</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
+
+<span class="c1"># 如果 &lt; 10%，需要增加 OCR 数据</span>
+<span class="k">if</span> <span class="n">ocr_ratio</span> <span class="o">&lt;</span> <span class="mf">0.1</span><span class="p">:</span>
+    <span class="n">add_ocr_augmentation</span><span class="p">()</span>
+    <span class="n">add_synthetic_text_rendering</span><span class="p">()</span>
+</code></pre></div>
+
+<ol start="4">
+<li><strong>架构验证</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 可视化注意力图</span>
+<span class="n">attention_maps</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_attention_maps</span><span class="p">(</span><span class="n">ocr_sample</span><span class="p">)</span>
+<span class="n">visualize_attention_on_text_regions</span><span class="p">(</span><span class="n">attention_maps</span><span class="p">)</span>
+
+<span class="c1"># 检查是否关注到文字区域</span>
+<span class="n">text_attention_ratio</span> <span class="o">=</span> <span class="n">compute_text_region_attention</span><span class="p">()</span>
+</code></pre></div>
+
+<ol start="5">
+<li><strong>针对性改进</strong>：</li>
+</ol>
+<p>如果是分辨率问题：</p>
+<ul>
+<li>使用动态分辨率或更高分辨率</li>
+<li>实现 AnyRes 或类似技术</li>
+</ul>
+<p>如果是数据问题：</p>
+<ul>
+<li>增加 OCR 数据（TextCaps、ST-VQA）</li>
+<li>数据增强：文字渲染、字体变换</li>
+<li>课程学习：先学简单OCR，再学复杂场景</li>
+</ul>
+<p>如果是架构问题：</p>
+<ul>
+<li>添加专门的 OCR head</li>
+<li>使用更大的视觉编码器</li>
+<li>微调视觉编码器而不是冻结</li>
+</ul>
+<ol start="6">
+<li><strong>A/B 测试验证</strong>：</li>
+</ol>
+<div class="codehilite"><pre><span></span><code><span class="n">improvements</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;baseline&#39;</span><span class="p">:</span> <span class="mi">30</span><span class="p">,</span>
+    <span class="s1">&#39;high_res&#39;</span><span class="p">:</span> <span class="n">test_high_resolution</span><span class="p">(),</span>
+    <span class="s1">&#39;more_ocr_data&#39;</span><span class="p">:</span> <span class="n">test_with_ocr_data</span><span class="p">(),</span>
+    <span class="s1">&#39;unfreeze_vision&#39;</span><span class="p">:</span> <span class="n">test_unfrozen_vision</span><span class="p">(),</span>
+    <span class="s1">&#39;combined&#39;</span><span class="p">:</span> <span class="n">test_all_improvements</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>预期结果：</p>
+<ul>
+<li>通过高分辨率：30% → 45%</li>
+<li>增加 OCR 数据：45% → 55%</li>
+<li>解冻视觉编码器：55% → 60%</li>
+<li>组合优化：达到 65%+</li>
+</ul>
+</details>
+<h2 id="_6">常见陷阱与错误</h2>
+<h3 id="1">陷阱 1：盲目追求大分辨率</h3>
+<p><strong>问题</strong>：直接将分辨率从 336 提升到 1024，训练崩溃或 OOM</p>
+<p><strong>原因</strong>：</p>
+<ul>
+<li>视觉 tokens 呈平方增长：(1024/16)² = 4096 tokens</li>
+<li>注意力计算和内存占用爆炸</li>
+<li>位置编码可能越界</li>
+</ul>
+<p><strong>解决</strong>：</p>
+<ol>
+<li>渐进式提升分辨率</li>
+<li>使用 AnyRes 等动态方案</li>
+<li>实现 efficient attention（Flash Attention）</li>
+</ol>
+<h3 id="2">陷阱 2：忽视模态平衡</h3>
+<p><strong>问题</strong>：模型只依赖文本，忽视图像信息</p>
+<p><strong>症状</strong>：</p>
+<ul>
+<li>相同问题不同图像，答案相同</li>
+<li>注意力权重偏向文本 tokens</li>
+</ul>
+<p><strong>解决</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 添加模态 dropout</span>
+<span class="k">if</span> <span class="n">training</span> <span class="ow">and</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.1</span><span class="p">:</span>
+    <span class="n">visual_features</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">visual_features</span><span class="p">)</span>
+
+<span class="c1"># 调整 loss 权重</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">text_loss</span> <span class="o">+</span> <span class="n">lambda_visual</span> <span class="o">*</span> <span class="n">visual_alignment_loss</span>
+</code></pre></div>
+
+<h3 id="3">陷阱 3：视觉编码器退化</h3>
+<p><strong>问题</strong>：微调后视觉编码器性能下降</p>
+<p><strong>检测</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 监控视觉特征质量</span>
+<span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">orig_features</span> <span class="o">=</span> <span class="n">original_clip</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+    <span class="n">curr_features</span> <span class="o">=</span> <span class="n">current_clip</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+    <span class="n">similarity</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">cosine_similarity</span><span class="p">(</span><span class="n">orig_features</span><span class="p">,</span> <span class="n">curr_features</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">similarity</span> <span class="o">&lt;</span> <span class="mf">0.8</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Vision encoder degradation detected&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>预防</strong>：</p>
+<ul>
+<li>使用较小的视觉编码器学习率</li>
+<li>添加知识蒸馏损失</li>
+<li>定期评估零样本性能</li>
+</ul>
+<h3 id="4">陷阱 4：注意力矩阵数值不稳定</h3>
+<p><strong>问题</strong>：长序列导致注意力分数过小，softmax 后变成 0</p>
+<p><strong>解决</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 使用 scaled dot-product attention</span>
+<span class="n">scale</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">d_k</span><span class="p">)</span>
+<span class="n">scores</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span> <span class="n">K</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">scale</span>
+
+<span class="c1"># 添加温度控制</span>
+<span class="n">temperature</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span> <span class="o">/</span> <span class="n">temperature</span>
+</code></pre></div>
+
+<h3 id="5-gpu">陷阱 5：多 GPU 训练不同步</h3>
+<p><strong>问题</strong>：不同 GPU 上的模型参数不一致</p>
+<p><strong>调试</strong>：</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 检查参数同步</span>
+<span class="k">if</span> <span class="n">dist</span><span class="o">.</span><span class="n">is_initialized</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">():</span>
+        <span class="n">gathered</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">param</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">world_size</span><span class="p">)]</span>
+        <span class="n">dist</span><span class="o">.</span><span class="n">all_gather</span><span class="p">(</span><span class="n">gathered</span><span class="p">,</span> <span class="n">param</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">gathered</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">g</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">gathered</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Parameter </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> not synchronized!&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h2 id="_7">最佳实践检查清单</h2>
+<h3 id="_8">架构设计</h3>
+<ul>
+<li>[ ] 选择了适合任务的视觉编码器（CLIP/ViT/其他）</li>
+<li>[ ] 对齐层复杂度与数据规模匹配</li>
+<li>[ ] 位置编码支持目标分辨率范围</li>
+<li>[ ] 注意力掩码正确实现跨模态交互</li>
+</ul>
+<h3 id="_9">训练配置</h3>
+<ul>
+<li>[ ] 学习率：视觉 &lt; 对齐层 &lt; 语言模型</li>
+<li>[ ] 梯度裁剪设置（通常 1.0）</li>
+<li>[ ] Warmup 步数充足（建议 500-1000 steps）</li>
+<li>[ ] 多阶段训练策略明确</li>
+</ul>
+<h3 id="_10">数据处理</h3>
+<ul>
+<li>[ ] 图像预处理与预训练一致</li>
+<li>[ ] 特殊 tokens 正确添加（<image>, </image>）</li>
+<li>[ ] 数据比例平衡（避免某类任务主导）</li>
+<li>[ ] 验证集覆盖所有任务类型</li>
+</ul>
+<h3 id="_11">性能优化</h3>
+<ul>
+<li>[ ] 使用 Flash Attention 或等效优化</li>
+<li>[ ] 开启混合精度训练</li>
+<li>[ ] 数据加载不成为瓶颈</li>
+<li>[ ] GPU 利用率 &gt; 80%</li>
+</ul>
+<h3 id="_12">监控调试</h3>
+<ul>
+<li>[ ] Loss 曲线平滑下降</li>
+<li>[ ] 监控梯度范数</li>
+<li>[ ] 定期保存 checkpoint</li>
+<li>[ ] 验证集指标持续改进</li>
+</ul>
+<h3 id="_13">评估部署</h3>
+<ul>
+<li>[ ] 测试集覆盖目标场景</li>
+<li>[ ] 推理速度满足要求</li>
+<li>[ ] 模型大小适合部署环境</li>
+<li>[ ] 准备了降级方案（量化/蒸馏）</li>
+</ul>
+            </article>
+            
+            <nav class="page-nav"><a href="index.html" class="nav-link prev">← 视觉语言模型（VLM）的监督微调与强化学习实战教程</a><a href="chapter2.html" class="nav-link next">第 2 章：数据准备与预处理 →</a></nav>
+        </main>
+    </div>
+</body>
+</html>
